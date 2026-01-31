@@ -1,0 +1,9 @@
+{
+  "[markdown]": {
+    "files.trimTrailingWhitespace": false,
+    "editor.wordWrap": "bounded",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  }
+}
