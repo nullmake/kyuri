@@ -1,0 +1,8 @@
+{
+  // Kyuri Configuration Template
+  "double_tap_ms": 200,
+  "layers": {
+    "M0": "Standard",
+    "M1": "Special"
+  }
+}
