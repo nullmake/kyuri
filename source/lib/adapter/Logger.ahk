@@ -79,7 +79,8 @@ class Logger {
         }
 
         ts := FormatTime(, "yyyyMMdd_HHmmss")
-        fileName := this.logDir . "\kyuri_" . ts . "_P" . this.pid . "_" . trigger . ".log"
+        fName := "kyuri_" . ts . "_P" . this.pid . "_" . trigger . ".log"
+        fullPath := this.logDir . "\" . fName
 
         content := ""
         for entry in this.buffer {
@@ -87,10 +88,10 @@ class Logger {
         }
 
         try {
-            if FileExist(fileName) {
-                FileDelete(fileName)
+            if FileExist(fullPath) {
+                FileDelete(fullPath)
             }
-            FileAppend(content, fileName, "UTF-8")
+            FileAppend(content, fullPath, "UTF-8")
             this.Rotate()
         } catch Error as e {
             OutputDebug("Log Flush failed: " . e.Message . "`n")
