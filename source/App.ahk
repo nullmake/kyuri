@@ -1,6 +1,26 @@
 #Requires AutoHotkey v2.0
 
-; Initial launch notification
-MsgBox "Kyuri has started successfully!", "Kyuri", "Iconi"
+; Vendor Libraries
+#Include Lib/vendor/JSON.ahk
 
-; TODO: Implement Core Engine initialization
+; Core & Adapter Layers
+#Include Lib/Core/ServiceLocator.ahk
+#Include Lib/Adapter/ConfigManager.ahk
+
+/**
+ * Application Entry Point
+ */
+
+; 1. Setup Configuration Service
+configSvc := ConfigManager(A_ScriptDir)
+
+; 2. Register Service (Enables ServiceLocator.Config)
+ServiceLocator.Register("Config", configSvc)
+
+; 3. Load settings
+ServiceLocator.Config.Load()
+
+; --- Verification ---
+doubleTapTime := ServiceLocator.Config.Get("double_tap_ms", 200)
+msg := "Kyuri Initialized.`nDouble Tap: " . doubleTapTime . "ms"
+MsgBox(msg, "Kyuri Project", 64)
