@@ -10,10 +10,10 @@ kyuri/
 ├── source/
 │   ├── App.ahk
 │   ├── config.json
-│   └── Lib/
-│       ├── Core/
-│       ├── Adapter/
-│       ├── UI/
+│   └── lib/
+│       ├── core/
+│       ├── adapter/
+│       ├── ui/
 │       └── vendor/
 └── tools/
 ```
@@ -22,10 +22,10 @@ kyuri/
 | :--- | :--- | :--- |
 | **`source/App.ahk`** | (Entry Point) | Initializes the application and connects the layers. |
 | **`source/config.json`** | External | External file holding user configurations in JSONC format. |
-| **`source/Lib/Core/`** | **Core Layer** | Contains pure remapping and decision logic with no external dependencies. |
-| **`source/Lib/Adapter/`** | **Adapter Layer** | Mediates between Core and the outside world (OS hooks, IME, Config). |
-| **`source/Lib/UI/`** | **UI Layer** | Handles user-facing elements like menu generation and setting GUIs. |
-| **`source/Lib/vendor/`** | **Adapter (Ext)** | Isolated external libraries (e.g., JSON parsers) used by the Adapter layer. |
+| **`source/lib/core/`** | **Core Layer** | Contains pure remapping and decision logic with no external dependencies. |
+| **`source/lib/adapter/`** | **Adapter Layer** | Mediates between Core and the outside world (OS hooks, IME, Config). |
+| **`source/lib/ui/`** | **UI Layer** | Handles user-facing elements like menu generation and setting GUIs. |
+| **`source/lib/vendor/`** | **Adapter (Ext)** | Isolated external libraries (e.g., JSON parsers) used by the Adapter layer. |
 | **`setup/`** | Infrastructure | Scripts for installation, such as Task Scheduler registration. |
 | **`tools/`** | Utilities | Helper scripts and debugging tools used during development. |
 

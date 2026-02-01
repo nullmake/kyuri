@@ -1,12 +1,12 @@
 #Requires AutoHotkey v2.0
 
 ; --- Vendor Libraries ---
-#Include Lib/vendor/JSON.ahk
+#Include lib/vendor/JSON.ahk
 
 ; --- Core & Adapter Layers ---
-#Include Lib/Core/ServiceLocator.ahk
-#Include Lib/Adapter/ConfigManager.ahk
-#Include Lib/Adapter/Logger.ahk
+#Include lib/core/ServiceLocator.ahk
+#Include lib/adapter/ConfigManager.ahk
+#Include lib/adapter/Logger.ahk
 
 /**
  * Application Entry Point: Kyuri Project
