@@ -7,8 +7,15 @@
     {
       "type": "ahk2",
       "request": "launch",
-      "name": "AutoHotkey v2 Debugger",
+      "name": "Run",
       "program": "${workspaceFolder}/source/App.ahk",
+      "stopOnEntry": true
+    },
+    {
+      "type": "ahk2",
+      "request": "launch",
+      "name": "Unit Test",
+      "program": "${workspaceFolder}/source/tests/TestApp.ahk",
       "stopOnEntry": true
     }
   ]
