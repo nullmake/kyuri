@@ -7,14 +7,27 @@ Kyuri (Keyboard Utility Remap Integrated) is a high-performance keyboard remappi
 ```text
 kyuri/
 ├── setup/
-│   └── install.ps1      # PowerShell script for Task Scheduler registration
 ├── source/
-│   ├── App.ahk          # Entry point of the application
-│   ├── config.json      # User configuration (JSONC)
-│   └── Lib/             # Modularized AHK library files
-│       └── vendor/      # External libraries
-└── tools/               # Helper scripts and utilities
+│   ├── App.ahk
+│   ├── config.json
+│   └── Lib/
+│       ├── Core/
+│       ├── Adapter/
+│       ├── UI/
+│       └── vendor/
+└── tools/
 ```
+
+| Directory / File | Layer | Description |
+| :--- | :--- | :--- |
+| **`source/App.ahk`** | (Entry Point) | Initializes the application and connects the layers. |
+| **`source/config.json`** | External | External file holding user configurations in JSONC format. |
+| **`source/Lib/Core/`** | **Core Layer** | Contains pure remapping and decision logic with no external dependencies. |
+| **`source/Lib/Adapter/`** | **Adapter Layer** | Mediates between Core and the outside world (OS hooks, IME, Config). |
+| **`source/Lib/UI/`** | **UI Layer** | Handles user-facing elements like menu generation and setting GUIs. |
+| **`source/Lib/vendor/`** | **Adapter (Ext)** | Isolated external libraries (e.g., JSON parsers) used by the Adapter layer. |
+| **`setup/`** | Infrastructure | Scripts for installation, such as Task Scheduler registration. |
+| **`tools/`** | Utilities | Helper scripts and debugging tools used during development. |
 
 ## Prerequisites
 
