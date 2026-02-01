@@ -30,9 +30,6 @@ class Logger {
         if !DirExist(this.logDir) {
             DirCreate(this.logDir)
         }
-
-        ; Register exit callback
-        OnExit((*) => this.Flush("EXIT"))
     }
 
     /**
