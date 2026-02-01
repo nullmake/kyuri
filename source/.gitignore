@@ -1,0 +1,20 @@
+#-----------------------
+# AutoHotkey Specific
+#-----------------------
+# Compiled binaries (AutoHotkey scripts converted to EXE)
+*.exe
+
+# AutoHotkey temporary files / logs
+*.log
+*.ahk.bak
+*.ahk.tmp
+~*.ahk
+*.bak
+
+# Setup related (If you use AHK-H or similar)
+_temp/
+
+#-----------------------
+# User specific config
+#-----------------------
+config.json
