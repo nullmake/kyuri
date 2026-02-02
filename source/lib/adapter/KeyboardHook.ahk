@@ -1,9 +1,9 @@
 #Requires AutoHotkey v2.0
 
 /**
- * KeyboardHook Class (Adapter Layer)
- * * Encapsulates WH_KEYBOARD_LL to capture system-wide keyboard input.
- * * Normalizes raw signals into KeyEvent and dispatches to InputProcessor.
+ * Class: KeyboardHook
+ * Adapter Layer that encapsulates WH_KEYBOARD_LL.
+ * Now decoupled from ServiceLocator/InputProcessor via callback injection.
  */
 class KeyboardHook {
     static WH_KEYBOARD_LL := 13
@@ -12,21 +12,26 @@ class KeyboardHook {
     static WM_SYSKEYDOWN := 0x0104
     static WM_SYSKEYUP := 0x0105
 
-    /** @prop {Integer} hHook - Handle to the Windows Hook */
+    /** @field {Integer} hHook - Handle to the Windows Hook */
     hHook := 0
-    /** @prop {Any} proc - Reference to the callback to prevent GC */
+    /** @field {Any} proc - Reference to the callback to prevent GC */
     proc := 0
+    /** @field {Function} onEvent - Injected event handler */
+    onEvent := ""
 
     /**
-     * Initializes the hook and starts capturing.
+     * Constructor: __New
+     * @param {Function} onEventCallback - Function to call when a key event occurs.
      */
-    __New() {
-        ; Use CallbackCreate to ensure it's not GC'd
+    __New(onEventCallback) {
+        this.onEvent := onEventCallback
+        ; Ensure the callback is tied to this instance
         this.proc := CallbackCreate(this._LowLevelKeyboardProc.Bind(this), "Fast", 3)
     }
 
     /**
-     * Starts the hook.
+     * Method: Start
+     * Begins capturing keyboard input.
      */
     Start() {
         if (this.hHook) {
@@ -43,7 +48,8 @@ class KeyboardHook {
     }
 
     /**
-     * Stops the hook.
+     * Method: Stop
+     * Releases the hook.
      */
     Stop() {
         if (this.hHook) {
@@ -103,27 +109,17 @@ class KeyboardHook {
             keyName := Format("vk{:02X}", vkCode)
         }
 
-        ; Create normalized KeyEvent
+        ; Create KeyEvent object
         event := KeyEvent(keyName, isDown, isPhysical)
 
-        ; Dispatch to Core layer via ServiceLocator
-        try {
-            processor := ServiceLocator.Get("InputProcessor")
-            processor.OnEvent(event)
-        } catch {
-            ; Suppress error if InputProcessor is not yet registered
+        ; Dispatch via injected callback
+        if (this.onEvent) {
+            this.onEvent(event)
         }
     }
 
-    /**
-     * Defensive logging if ServiceLocator is unavailable.
-     * @private
-     */
     _SafeLog(err) {
-        try {
-            ServiceLocator.Log.Error("Hook Error: " . err.Message)
-        } catch {
-            OutputDebug("!!! HOOK CRITICAL: " . err.Message)
-        }
+        ; Use OutputDebug to avoid dependency on Logger class
+        OutputDebug("Kyuri Hook Error: " . err.Message . " (" . err.Line . ")")
     }
 }

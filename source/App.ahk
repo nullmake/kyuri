@@ -10,7 +10,6 @@
 
 ; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
-#Include lib/adapter/KeyboardHook.ahk
 
 ; --- Core Layer ---
 #Include lib/core/KeyEvent.ahk
@@ -31,36 +30,34 @@ try {
 
     ; 3. Setup Configuration Service
     configSvc := ConfigManager(A_ScriptDir)
+    configSvc.Load()
     ServiceLocator.Register("Config", configSvc)
 
-    ; Load settings from JSON
-    ServiceLocator.Config.Load()
+    ; 4. Initialize Core Engine (InputProcessor)
+    ; This handles dynamic hotkey registration internally.
+    processor := InputProcessor()
+    ServiceLocator.Register("InputProcessor", processor)
 
-    ; 4. Log basic environment info
-    ServiceLocator.Log.Info("Config version: " . ServiceLocator.Config.Get("General.Version"))
+    ; 5. Log basic environment info
+    ServiceLocator.Log.Info("Config version: " . configSvc.Get("General.Version"))
     ServiceLocator.Log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
+    ServiceLocator.Log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")
 
-    ; 5. Start Keyboard Hook and Input Processor
-    ServiceLocator.Register("InputProcessor", InputProcessor())
-    hook := KeyboardHook()
-    hook.Start()
 } catch Error as e {
-    ; Immediate logging for predictable startup failures
-    ServiceLocator.Log.Error("Initialization failed: " . e.Message)
+    ServiceLocator.Log.Error("Initialization failed: " . e.Message . " at " . e.What)
     MsgBox("Kyuri failed to start.`nCheck the log folder for details.", "Critical Error", 16)
     ExitApp()
 }
 
-; --- Main Application Loop / Hotkeys ---
-ServiceLocator.Log.Info("Kyuri is now running and ready.")
+; --- Debug / Utility Hotkeys ---
 
 ^!l:: {
-    ServiceLocator.Log.Info("Manual log flush triggered by user.")
     ServiceLocator.Log.Flush("MAN")
     MsgBox("Logs have been flushed.", "Kyuri Debug", 64)
 }
 
+^!r:: Reload()
+
 ^!e:: {
-    ; Test global handler by throwing an uncaught error
     throw Error("Simulated uncaught exception for debugging.")
 }
