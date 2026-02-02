@@ -70,6 +70,10 @@ class JSON {
             } else if (char == "n" && SubStr(text, pos, 4) == "null") {
                 pos += 4
                 return ""
+            } else if (char == "}" || char == "]" || char == "") {
+                ; Safety: If we hit an end-char where a value was expected,
+                ; it's either an empty structure or malformed JSON.
+                return ""
             } else {
                 return parse_number()
             }
@@ -85,7 +89,8 @@ class JSON {
             pos++ ; skip {
             loop {
                 eat_whitespace()
-                if (SubStr(text, pos, 1) == "}") {
+                char := SubStr(text, pos, 1)
+                if (char == "}" || char == "") {
                     pos++
                     return obj
                 }
@@ -101,8 +106,12 @@ class JSON {
                     return obj
                 } else if (next == ",") {
                     pos++
+                } else {
+                    ; If no comma or brace, check if we've reached the end anyway
+                    break
                 }
             }
+            return obj
         }
 
         parse_array() {
@@ -110,7 +119,8 @@ class JSON {
             pos++ ; skip [
             loop {
                 eat_whitespace()
-                if (SubStr(text, pos, 1) == "]") {
+                char := SubStr(text, pos, 1)
+                if (char == "]" || char == "") {
                     pos++
                     return arr
                 }
@@ -122,8 +132,11 @@ class JSON {
                     return arr
                 } else if (next == ",") {
                     pos++
+                } else {
+                    break
                 }
             }
+            return arr
         }
 
         parse_string() {
@@ -167,9 +180,11 @@ class JSON {
         }
 
         parse_number() {
-            RegExMatch(text, "S)-?\d+(\.\d+)?([eE][+-]?\d+)?", &match, pos)
-            pos += match.Len
-            return Number(match[0])
+            if RegExMatch(text, "S)\G-?\d+(\.\d+)?([eE][+-]?\d+)?", &match, pos) {
+                pos += match.Len(0)
+                return Number(match[0])
+            }
+            throw Error("JSON Parse Error: Expected number at position " . pos)
         }
 
         return parse_value()

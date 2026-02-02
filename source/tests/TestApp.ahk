@@ -22,6 +22,7 @@
 #Include TestRunner.ahk
 #Include adapter/ConfigManagerTest.ahk
 #Include infrastructure/LoggerTest.ahk
+#Include vender/JSONUnitTest.ahk
 
 ; Determine paths
 SplitPath(A_ScriptDir, , &projectRoot)
@@ -38,8 +39,10 @@ try {
     ServiceLocator.Log.Info("Starting Kyuri Test Suite...")
 
     ; 3. Execute Test Suites
-    success := TestRunner.Run(ConfigManagerTest())
+    success := true
+    success := TestRunner.Run(ConfigManagerTest()) && success
     success := TestRunner.Run(LoggerTest()) && success
+    success := TestRunner.Run(JSONUnitTest()) && success
 
     if (success) {
         ServiceLocator.Log.Info("All test suites passed.")
