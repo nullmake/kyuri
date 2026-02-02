@@ -30,7 +30,10 @@ class ConfigManager {
             this.InitializeFromTemplate()
         }
         try {
-            ; JSON.LoadFile strips comments internally
+            /**
+             * JSON.LoadFile strips comments internally.
+             * This method ensures the settings map is populated from the physical file.
+             */
             this.settings := JSON.LoadFile(this.configFilePath)
         } catch Error as e {
             MsgBox("Failed to load config.json:`n" . e.Message, "Kyuri Error", 16)
@@ -39,17 +42,38 @@ class ConfigManager {
     }
 
     /**
-     * Method: Get
-     * @param {String} key - The setting key
-     * @param {Any} defaultValue - Fallback value
-     * @returns {Any}
+     * Gets a value using dot-notation path.
+     * @param {String} path - Path string like "General.Version" or "Modifiers.M0".
+     * @param {Any} defaultValue - Value to return if the path is not found.
+     * @returns {Any} The value found at the path or the defaultValue.
      */
-    Get(key, defaultValue := "") => (
-        this.settings.Has(key) ? this.settings[key] : defaultValue
-    )
+    Get(path, defaultValue := "") {
+        if (path == "") {
+            return this.settings
+        }
+
+        keys := StrSplit(path, ".")
+        current := this.settings
+
+        /**
+         * Traverse the settings structure recursively based on the dot-notation keys.
+         * Supports both Map (JSON objects) and standard objects if necessary.
+         */
+        for key in keys {
+            if (current is Map && current.Has(key)) {
+                current := current[key]
+            } else if (IsObject(current) && HasProp(current, key)) {
+                current := current.%key%
+            } else {
+                return defaultValue
+            }
+        }
+        return current
+    }
 
     /**
      * Method: InitializeFromTemplate
+     * Copies the template file to the active config file path if it doesn't exist.
      */
     InitializeFromTemplate() {
         if !FileExist(this.templatePath) {
