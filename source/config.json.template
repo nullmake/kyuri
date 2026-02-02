@@ -42,7 +42,7 @@
       "Trigger": "j",
       "HoldM0": "Down",
       "HoldM1": "LControl+Down",
-      "HoldBoth": "End"
+      "HoldBoth": "PgDn"
     },
     {
       "Trigger": "k",
@@ -54,7 +54,7 @@
       "Trigger": "l",
       "HoldM0": "Right",
       "HoldM1": "LControl+Right",
-      "HoldBoth": "PgDn"
+      "HoldBoth": "End"
     }
   ],
   "Menus": {
