@@ -21,8 +21,6 @@ ServiceLocator.Register("Log", Logger(A_ScriptDir, 1000, 30))
 ; 2. Register Global Error Handler for uncaught exceptions
 OnError(GlobalErrorHandler)
 
-throw Error("Test Error before init")
-
 try {
     ServiceLocator.Log.Info("Kyuri Project initialization sequence started.")
 
