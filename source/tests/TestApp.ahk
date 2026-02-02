@@ -2,7 +2,6 @@
 
 /**
  * Test Application Entry Point
- * Location: source/tests/TestApp.ahk
  */
 
 ; --- Vendor Libraries ---
@@ -20,20 +19,20 @@
 #Include adapter/LoggerTest.ahk
 
 ; Determine paths
-; projectRoot is for Config (source/), while A_ScriptDir is for Test Logs (source/tests/)
 SplitPath(A_ScriptDir, , &projectRoot)
 
 ; 1. Setup Services
-; Log: Output to source/tests/log/
-; Config: Load from source/config.json
 ServiceLocator.Register("Log", Logger(A_ScriptDir, 1000, 1))
 ServiceLocator.Register("Config", ConfigManager(projectRoot))
+
+; 2. Register Global Error Handler
+OnError(GlobalErrorHandler)
 
 try {
     ServiceLocator.Config.Load()
     ServiceLocator.Log.Info("Starting Kyuri Test Suite...")
 
-    ; 2. Execute Test Suites
+    ; 3. Execute Test Suites
     success := TestRunner.Run(ConfigManagerTest())
     success := TestRunner.Run(LoggerTest()) && success
 
@@ -47,7 +46,18 @@ try {
     ServiceLocator.Log.Error("Test Runner crashed: " . e.Message)
 }
 
-; 3. Finalize
-; Explicitly mark the end of the test without redundant EXIT log
+/**
+ * Global Error Handler for Test Environment
+ */
+GlobalErrorHandler(thrownObj, mode) {
+    try {
+        ServiceLocator.Log.Error(thrownObj)
+    } catch {
+        OutputDebug("!!! FATAL: Logger unavailable. Original Error: " . thrownObj.Message)
+    }
+    return 0
+}
+
+; 4. Finalize
 ServiceLocator.Log.Flush("TEST_END")
 MsgBox("Tests completed. Check 'source/tests/log/' for results.", "Kyuri Test", 64)

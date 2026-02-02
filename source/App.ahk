@@ -13,43 +13,57 @@
  */
 
 ; 1. Setup Logging Service first to capture all initialization events
-; Configuration: 1000 lines buffer, 30 max files
 ServiceLocator.Register("Log", Logger(A_ScriptDir, 1000, 30))
+
+; 2. Register Global Error Handler for uncaught exceptions
+OnError(GlobalErrorHandler)
 
 try {
     ServiceLocator.Log.Info("Kyuri Project initialization sequence started.")
 
-    ; 2. Setup Configuration Service
+    ; 3. Setup Configuration Service
     configSvc := ConfigManager(A_ScriptDir)
     ServiceLocator.Register("Config", configSvc)
 
     ; Load settings from JSON
     ServiceLocator.Config.Load()
 
-    ; 3. Log basic environment info
+    ; 4. Log basic environment info
     doubleTap := ServiceLocator.Config.Get("double_tap_ms", 200)
     ServiceLocator.Log.Info("Configuration loaded. DoubleTap: " . doubleTap . "ms")
     ServiceLocator.Log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
 
 } catch Error as e {
-    ; Any failure during startup triggers an immediate log flush
+    ; Immediate logging for predictable startup failures
     ServiceLocator.Log.Error("Initialization failed: " . e.Message)
     MsgBox("Kyuri failed to start.`nCheck the log folder for details.", "Critical Error", 16)
     ExitApp()
+}
+
+/**
+ * Global Uncaught Error Handler
+ * Ensures that even unexpected crashes are logged for post-mortem analysis.
+ */
+GlobalErrorHandler(thrownObj, mode) {
+    try {
+        ServiceLocator.Log.Error(thrownObj)
+    } catch {
+        OutputDebug("!!! FATAL: Logger unavailable. Original Error: " . thrownObj.Message)
+    }
+    return 0
 }
 
 ; --- Main Application Loop / Hotkeys ---
 
 ServiceLocator.Log.Info("Kyuri is now running and ready.")
 
-; Simple test hotkey (Ctrl+Alt+L) to manually trigger a log flush
 ^!l:: {
     ServiceLocator.Log.Info("Manual log flush triggered by user.")
     ServiceLocator.Log.Flush("MAN")
-    MsgBox("Logs have been flushed to the log/ directory.", "Kyuri Debug", 64)
+    MsgBox("Logs have been flushed.", "Kyuri Debug", 64)
 }
 
-; Test hotkey to simulate an error (Ctrl+Alt+E)
 ^!e:: {
-    ServiceLocator.Log.Error("Simulated error for logging verification.")
+    ; Test global handler by throwing an uncaught error
+    throw Error("Simulated uncaught exception for debugging.")
 }
