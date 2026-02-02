@@ -10,6 +10,11 @@
 
 ; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
+#Include lib/adapter/KeyboardHook.ahk
+
+; --- Core Layer ---
+#Include lib/core/KeyEvent.ahk
+#Include lib/core/InputProcessor.ahk
 
 /**
  * Application Entry Point: Kyuri Project
@@ -36,6 +41,10 @@ try {
     ServiceLocator.Log.Info("Configuration loaded. DoubleTap: " . doubleTap . "ms")
     ServiceLocator.Log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
 
+    ; 5. Start Keyboard Hook and Input Processor
+    ServiceLocator.Register("InputProcessor", InputProcessor())
+    hook := KeyboardHook()
+    hook.Start()
 } catch Error as e {
     ; Immediate logging for predictable startup failures
     ServiceLocator.Log.Error("Initialization failed: " . e.Message)
