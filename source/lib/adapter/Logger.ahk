@@ -3,8 +3,11 @@
 /**
  * Class: Logger
  * Buffers logs in memory and flushes to rotating files.
+ * Automatically captures file and line info for all levels.
  */
 class Logger {
+    /** @field {Boolean} _enabled - Internal logging state */
+    _enabled := true
     /** @field {String} logDir - Directory for log files */
     logDir := ""
     /** @field {Array} buffer - Memory storage for log entries */
@@ -17,15 +20,31 @@ class Logger {
     pid := DllCall("GetCurrentProcessId")
 
     /**
+     * Property: Enabled
+     * Handles switching and clears buffer when disabled.
+     */
+    Enabled {
+        get => this._enabled
+        set {
+            this._enabled := value
+            if (!value) {
+                this.buffer := []
+            }
+        }
+    }
+
+    /**
      * Constructor: __New
      * @param {String} baseDir - Application base directory
      * @param {Integer} maxEntries - Buffer size limit
      * @param {Integer} maxFiles - Maximum history files
+     * @param {Boolean} enabled - Initial logging state
      */
-    __New(baseDir, maxEntries := 1000, maxFiles := 30) {
+    __New(baseDir, maxEntries := 1000, maxFiles := 30, enabled := true) {
         this.logDir := baseDir . "\log"
         this.maxEntries := maxEntries
         this.maxFiles := maxFiles
+        this.Enabled := enabled
 
         if !DirExist(this.logDir) {
             DirCreate(this.logDir)
@@ -47,25 +66,53 @@ class Logger {
 
     /**
      * Method: Error
+     * @param {String|Object} err - Error message or Error object.
      */
-    Error(message) {
-        this.Log("ERROR", message)
+    Error(err) {
+        if (IsObject(err)) {
+            ; Pass Error object directly to Log for special handling
+            this.Log("ERROR", err)
+        } else {
+            this.Log("ERROR", err)
+        }
         this.Flush("ERR")
     }
 
     /**
-     * Method: Log
-     * Internal: Manage buffer and OutputDebug.
+     * Method: Log (Internal)
+     * Handles metadata extraction and buffering.
+     * @param {String} level - INFO, WARN, ERROR, etc.
+     * @param {String|Object} msg - The message or error object.
      */
-    Log(level, message) {
+    Log(level, msg) {
+        if (!this.Enabled) {
+            return
+        }
+
+        detail := ""
+        if (IsObject(msg)) {
+            ; Case: Error object passed
+            SplitPath(msg.File, &fileName)
+            detail := Format("[{1}:{2}] {3}", fileName, msg.Line, msg.Message)
+        } else {
+            ; Case: String passed - capture caller location using Error(-2)
+            ; -2 reaches the method that called Info()/Warn()/Error()
+            try {
+                throw Error("", -2)
+            } catch Error as e {
+                SplitPath(e.File, &fileName)
+                detail := Format("[{1}:{2}] {3}", fileName, e.Line, msg)
+            }
+        }
+
         ts := FormatTime(, "yyyy-MM-dd HH:mm:ss")
-        entry := "[" . ts . "] [" . level . "] " . message
+        entry := "[" . ts . "] [" . level . "] " . detail
         this.buffer.Push(entry)
 
         if (this.buffer.Length > this.maxEntries) {
             this.buffer.RemoveAt(1)
         }
-        OutputDebug(entry . "`n")
+        OutputDebug(entry)
     }
 
     /**
@@ -74,7 +121,7 @@ class Logger {
      * @param {String} trigger - Label for the filename (Default: MAN)
      */
     Flush(trigger := "MAN") {
-        if (this.buffer.Length == 0) {
+        if (!this.Enabled || this.buffer.Length == 0) {
             return
         }
 
@@ -94,7 +141,7 @@ class Logger {
             FileAppend(content, fullPath, "UTF-8")
             this.Rotate()
         } catch Error as e {
-            OutputDebug("Log Flush failed: " . e.Message . "`n")
+            OutputDebug("Log Flush failed: " . e.Message)
         }
     }
 
