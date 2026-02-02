@@ -48,7 +48,7 @@ class TestRunner {
                     this.log.Info("    => [PASS]")
                 } catch Error as e {
                     failCount++
-                    log.Error("    => [FAIL] " . e.Message)
+                    log.Error("    => [FAIL]", e)
                 } finally {
                     ; Run Teardown if exists
                     if HasMethod(testSuite, "Teardown")

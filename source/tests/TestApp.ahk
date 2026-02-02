@@ -51,7 +51,7 @@ try {
     }
 
 } catch Error as e {
-    _Log.Error("Test Runner crashed: " . e.Message)
+    _Log.Error("Test Runner crashed.", e)
 }
 
 ; 4. Finalize

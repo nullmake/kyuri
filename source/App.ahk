@@ -42,7 +42,7 @@ try {
     _log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")
 
 } catch Error as e {
-    _Log.Error("Initialization failed: " . e.Message . " at " . e.What)
+    _Log.Error("Initialization failed: ", e)
     MsgBox("Kyuri failed to start.`nCheck the log folder for details.", "Critical Error", 16)
     ExitApp()
 }

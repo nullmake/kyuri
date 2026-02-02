@@ -6,7 +6,7 @@
  */
 GlobalErrorHandler(thrownObj, mode) {
     try {
-        ServiceLocator.Log.Error(thrownObj)
+        ServiceLocator.Log.Error("Uncaught error occured.", thrownObj)
     } catch {
         OutputDebug("!!! FATAL: Logger unavailable. Original Error: " . thrownObj.Message)
     }

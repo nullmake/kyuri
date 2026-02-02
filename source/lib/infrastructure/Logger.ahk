@@ -66,15 +66,11 @@ class Logger {
 
     /**
      * Method: Error
-     * @param {String|Object} err - Error message or Error object.
+     * @param {String} err - Error message or Error object.
+     * @param {Error} err - The Error object.
      */
-    Error(err) {
-        if (IsObject(err)) {
-            ; Pass Error object directly to Log for special handling
-            this.Log("ERROR", err)
-        } else {
-            this.Log("ERROR", err)
-        }
+    Error(message, err := unset) {
+        this.Log("ERROR", message, err)
         this.Flush("ERR")
     }
 
@@ -82,27 +78,27 @@ class Logger {
      * Method: Log (Internal)
      * Handles metadata extraction and buffering.
      * @param {String} level - INFO, WARN, ERROR, etc.
-     * @param {String|Object} msg - The message or error object.
+     * @param {String} msg - The message.
+     * @param {Error} err - The Error object.
      */
-    Log(level, msg) {
+    Log(level, msg, err := unset) {
         if (!this.Enabled) {
             return
         }
 
         detail := ""
-        if (IsObject(msg)) {
-            ; Case: Error object passed
-            SplitPath(msg.File, &fileName)
-            detail := Format("[{1}:{2}] {3}", fileName, msg.Line, msg.Message)
-        } else {
-            ; Case: String passed - capture caller location using Error(-2)
-            ; -2 reaches the method that called Info()/Warn()/Error()
-            try {
-                throw Error("", -2)
-            } catch Error as e {
-                SplitPath(e.File, &fileName)
-                detail := Format("[{1}:{2}] {3}", fileName, e.Line, msg)
-            }
+        ; Case: String passed - capture caller location using Error(-2)
+        ; -2 reaches the method that called Info()/Warn()/Error()
+        try {
+            throw Error("", -2)
+        } catch Error as e {
+            SplitPath(e.File, &fileName)
+            detail := Format("[{1}:{2}] {3}", fileName, e.Line, msg)
+        }
+
+        if (IsSet(err)) {
+            detail .= "`n[" . err.What . "] " . err.Message
+            detail .= "`n--- call stack ---`n" . err.Stack
         }
 
         ts := FormatTime(, "yyyy-MM-dd HH:mm:ss")
