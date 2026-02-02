@@ -3,10 +3,13 @@
 ; --- Vendor Libraries ---
 #Include lib/vendor/JSON.ahk
 
-; --- Core & Adapter Layers ---
-#Include lib/core/ServiceLocator.ahk
+; --- Infrastructure Layer ---
+#Include lib/infrastructure/ServiceLocator.ahk
+#Include lib/infrastructure/Logger.ahk
+#Include lib/infrastructure/GlobalErrorHandler.ahk
+
+; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
-#Include lib/adapter/Logger.ahk
 
 /**
  * Application Entry Point: Kyuri Project
@@ -17,6 +20,8 @@ ServiceLocator.Register("Log", Logger(A_ScriptDir, 1000, 30))
 
 ; 2. Register Global Error Handler for uncaught exceptions
 OnError(GlobalErrorHandler)
+
+throw Error("Test Error before init")
 
 try {
     ServiceLocator.Log.Info("Kyuri Project initialization sequence started.")
@@ -40,21 +45,7 @@ try {
     ExitApp()
 }
 
-/**
- * Global Uncaught Error Handler
- * Ensures that even unexpected crashes are logged for post-mortem analysis.
- */
-GlobalErrorHandler(thrownObj, mode) {
-    try {
-        ServiceLocator.Log.Error(thrownObj)
-    } catch {
-        OutputDebug("!!! FATAL: Logger unavailable. Original Error: " . thrownObj.Message)
-    }
-    return 0
-}
-
 ; --- Main Application Loop / Hotkeys ---
-
 ServiceLocator.Log.Info("Kyuri is now running and ready.")
 
 ^!l:: {

@@ -7,16 +7,21 @@
 ; --- Vendor Libraries ---
 #Include ../lib/vendor/JSON.ahk
 
-; --- Core & Adapter Layers ---
-#Include ../lib/core/ServiceLocator.ahk
-#Include ../lib/core/Assert.ahk
+; --- Infrastructure Layer ---
+#Include ../lib/infrastructure/ServiceLocator.ahk
+#Include ../lib/infrastructure/Logger.ahk
+#Include ../lib/infrastructure/Assert.ahk
+#Include ../lib/infrastructure/GlobalErrorHandler.ahk
+
+; --- Adapter Layer ---
 #Include ../lib/adapter/ConfigManager.ahk
-#Include ../lib/adapter/Logger.ahk
+
+; --- Core Layer ---
 
 ; --- Test Infrastructure & Suites ---
 #Include TestRunner.ahk
 #Include adapter/ConfigManagerTest.ahk
-#Include adapter/LoggerTest.ahk
+#Include infrastructure/LoggerTest.ahk
 
 ; Determine paths
 SplitPath(A_ScriptDir, , &projectRoot)
@@ -44,18 +49,6 @@ try {
 
 } catch Error as e {
     ServiceLocator.Log.Error("Test Runner crashed: " . e.Message)
-}
-
-/**
- * Global Error Handler for Test Environment
- */
-GlobalErrorHandler(thrownObj, mode) {
-    try {
-        ServiceLocator.Log.Error(thrownObj)
-    } catch {
-        OutputDebug("!!! FATAL: Logger unavailable. Original Error: " . thrownObj.Message)
-    }
-    return 0
 }
 
 ; 4. Finalize

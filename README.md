@@ -13,6 +13,7 @@ kyuri/
 │   ├── lib/
 │   │   ├── core/
 │   │   ├── adapter/
+│   │   ├── infrastructure/
 │   │   ├── ui/
 │   │   └── vendor/
 │   └── tests/
@@ -21,15 +22,15 @@ kyuri/
 
 | Directory / File | Layer | Description |
 | :--- | :--- | :--- |
-| **source/App.ahk** | (Entry Point) | Initializes the application and connects the layers. |
-| **source/config.json** | External | External file holding user configurations in JSONC format. |
-| **source/lib/core/** | **Core Layer** | Pure remapping and decision logic. Includes Assert.ahk. |
-| **source/lib/adapter/** | **Adapter Layer** | Mediates between Core and OS (Hooks, IME, Config, Logger). |
-| **source/lib/ui/** | **UI Layer** | Handles menus and setting GUIs. |
-| **source/lib/vendor/** | **Adapter (Ext)** | Isolated external libraries (e.g., JSON parsers). |
-| **source/tests/** | **Test Infra** | Unit tests and TestRunner.ahk for quality assurance. |
-| **setup/** | Infrastructure | Installation scripts (e.g., Task Scheduler registration). |
-| **tools/** | Utilities | Debugging and development helper scripts. |
+| **setup/** | (Utilities) | Installation scripts (e.g., Task Scheduler registration). |
+| **source/App.ahk** | (Infrastructure) | Orchestrator. Initializes the base infra and starts the app. |
+| **source/lib/core/** | **Core Layer** | Pure business logic and remapping rules. No dependencies on OS/Infra. |
+| **source/lib/adapter/** | **Adapter Layer** | Implements interfaces for OS Hooks, IME, and File I/O. |
+| **source/lib/infrastructure/** | **Infra Layer** | Cross-cutting tools: ServiceLocator, Logger, Assert, GlobalErrorHandler. |
+| **source/lib/ui/** | **UI Layer** | Dynamic Menu generation and Setting GUIs. |
+| **source/lib/vendor/** | **Vendor (Ext)** | Third-party libraries isolated from internal logic. |
+| **source/tests/** | (Test Infra) | Unit tests following the source directory structure. |
+| **tools/** | (Utilities) | Debugging and development helper scripts. |
 
 ## Prerequisites
 
