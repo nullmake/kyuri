@@ -9,14 +9,19 @@
 class InputProcessor {
     /** @field {ConfigManager} config - Reference to config adapter */
     config := ""
+    /** @field {Logger} log - Renamed from 'log' to avoid conflict */
+    log := ""
     /** @field {Map} modifierState - Current hold state of virtual modifiers */
     modifierState := Map("M0", false, "M1", false)
 
     /**
      * Constructor: __New
+     * @param {ConfigManager} configSvc
+     * @param {Logger} logSvc
      */
-    __New() {
-        this.config := ServiceLocator.Config
+    __New(configSvc, logSvc) {
+        this.config := configSvc
+        this.log := logSvc
         this.InitializeHotkeys()
     }
 
@@ -25,6 +30,7 @@ class InputProcessor {
      * Dynamically registers modifiers and trigger keys based on JSON config.
      */
     InitializeHotkeys() {
+        this.log.Info("Initializing dynamic hotkeys...")
         ; 1. Register Virtual Modifiers (M0, M1)
         for modName in ["M0", "M1"] {
             vk := this.config.Get("Modifiers." . modName . ".vkCode")

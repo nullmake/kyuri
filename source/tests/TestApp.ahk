@@ -28,32 +28,32 @@
 SplitPath(A_ScriptDir, , &projectRoot)
 
 ; 1. Setup Services
-ServiceLocator.Register("Log", Logger(A_ScriptDir, 1000, 1))
-ServiceLocator.Register("Config", ConfigManager(projectRoot))
+_log := Logger(A_ScriptDir, 1000, 1)
+ServiceLocator.Register("Log", _log)
 
 ; 2. Register Global Error Handler
 OnError(GlobalErrorHandler)
 
 try {
-    ServiceLocator.Config.Load()
-    ServiceLocator.Log.Info("Starting Kyuri Test Suite...")
+    _log.Info("Starting Kyuri Test Suite...")
 
     ; 3. Execute Test Suites
+    _runner := TestRunner(_log)
     success := true
-    success := TestRunner.Run(ConfigManagerTest()) && success
-    success := TestRunner.Run(LoggerTest()) && success
-    success := TestRunner.Run(JSONUnitTest()) && success
+    success := _runner.Run(ConfigManagerTest()) && success
+    success := _runner.Run(LoggerTest()) && success
+    success := _runner.Run(JSONUnitTest()) && success
 
     if (success) {
-        ServiceLocator.Log.Info("All test suites passed.")
+        _log.Info("All test suites passed.")
     } else {
-        ServiceLocator.Log.Error("Test failures detected.")
+        _log.Error("Test failures detected.")
     }
 
 } catch Error as e {
-    ServiceLocator.Log.Error("Test Runner crashed: " . e.Message)
+    _Log.Error("Test Runner crashed: " . e.Message)
 }
 
 ; 4. Finalize
-ServiceLocator.Log.Flush("TEST_END")
+_log.Flush("TEST_END")
 MsgBox("Tests completed. Check 'source/tests/log/' for results.", "Kyuri Test", 64)

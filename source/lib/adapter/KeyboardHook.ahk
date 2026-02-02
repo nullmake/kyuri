@@ -3,7 +3,6 @@
 /**
  * Class: KeyboardHook
  * Adapter Layer that encapsulates WH_KEYBOARD_LL.
- * Now decoupled from ServiceLocator/InputProcessor via callback injection.
  */
 class KeyboardHook {
     static WH_KEYBOARD_LL := 13

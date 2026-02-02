@@ -20,31 +20,29 @@
  */
 
 ; 1. Setup Logging Service first to capture all initialization events
-ServiceLocator.Register("Log", Logger(A_ScriptDir, 1000, 30))
+_log := Logger(A_ScriptDir, 1000, 30)
+ServiceLocator.Register("Log", _log)
 
 ; 2. Register Global Error Handler for uncaught exceptions
 OnError(GlobalErrorHandler)
 
 try {
-    ServiceLocator.Log.Info("Kyuri Project initialization sequence started.")
+    _log.Info("Kyuri Project initialization sequence started.")
 
     ; 3. Setup Configuration Service
-    configSvc := ConfigManager(A_ScriptDir)
-    configSvc.Load()
-    ServiceLocator.Register("Config", configSvc)
+    _configSvc := ConfigManager(A_ScriptDir)
+    _configSvc.Load()
 
     ; 4. Initialize Core Engine (InputProcessor)
-    ; This handles dynamic hotkey registration internally.
-    processor := InputProcessor()
-    ServiceLocator.Register("InputProcessor", processor)
+    _processor := InputProcessor(_configSvc, _log)
 
     ; 5. Log basic environment info
-    ServiceLocator.Log.Info("Config version: " . configSvc.Get("General.Version"))
-    ServiceLocator.Log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
-    ServiceLocator.Log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")
+    _log.Info("Config version: " . _configSvc.Get("General.Version"))
+    _log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
+    _log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")
 
 } catch Error as e {
-    ServiceLocator.Log.Error("Initialization failed: " . e.Message . " at " . e.What)
+    _Log.Error("Initialization failed: " . e.Message . " at " . e.What)
     MsgBox("Kyuri failed to start.`nCheck the log folder for details.", "Critical Error", 16)
     ExitApp()
 }
@@ -52,7 +50,7 @@ try {
 ; --- Debug / Utility Hotkeys ---
 
 ^!l:: {
-    ServiceLocator.Log.Flush("MAN")
+    _log.Flush("MAN")
     MsgBox("Logs have been flushed.", "Kyuri Debug", 64)
 }
 
