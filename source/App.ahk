@@ -37,8 +37,7 @@ try {
     ServiceLocator.Config.Load()
 
     ; 4. Log basic environment info
-    doubleTap := ServiceLocator.Config.Get("double_tap_ms", 200)
-    ServiceLocator.Log.Info("Configuration loaded. DoubleTap: " . doubleTap . "ms")
+    ServiceLocator.Log.Info("Config version: " . ServiceLocator.Config.Get("General.Version"))
     ServiceLocator.Log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
 
     ; 5. Start Keyboard Hook and Input Processor
