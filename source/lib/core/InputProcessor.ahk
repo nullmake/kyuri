@@ -9,7 +9,9 @@ class InputProcessor {
     config := ""
     /** @field {Logger} log - Application logger instance */
     log := ""
-    /** @field {Map} modifierState - Current hold state of virtual modifiers */
+    /**
+     * @field {Map} modifierState - Current hold state of virtual modifiers (M0, M1).
+     */
     modifierState := Map("M0", false, "M1", false)
 
     /**
@@ -39,8 +41,7 @@ class InputProcessor {
 
             ; Bind Press and Release.
             ; Use '*' to allow any standard modifiers (Shift, Ctrl, etc.) to be held.
-            ; Note: '~' (tilde) is omitted to block the original key's function.
-            ; Note: OnModifierPress/Release will also receive 'HotkeyName' as 1st arg.
+
             this.log.Info("Registering hotkey: " . vk . " => " . modName)
             Hotkey("*" . vk, this.OnModifierPress.Bind(this, modName))
             Hotkey("*" . vk . " up", this.OnModifierRelease.Bind(this, modName))
