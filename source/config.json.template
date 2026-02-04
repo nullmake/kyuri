@@ -29,31 +29,35 @@
   "Remaps": [
     {
       "Trigger": "vkF0",
-      "Tap": "IMEToggle",
+      "Tap": "IMEToggle()",
       "Comment": "CapsLock to IME Toggle"
+    },
+    {
+      "Trigger": "f",
+      "HoldM0": "Escape"
     },
     {
       "Trigger": "h",
       "HoldM0": "Left",
-      "HoldM1": "LControl+Left",
+      "HoldM1": "^Left",
       "HoldBoth": "Home"
     },
     {
       "Trigger": "j",
       "HoldM0": "Down",
-      "HoldM1": "LControl+Down",
+      "HoldM1": "^Down",
       "HoldBoth": "PgDn"
     },
     {
       "Trigger": "k",
       "HoldM0": "Up",
-      "HoldM1": "LControl+Up",
+      "HoldM1": "^Up",
       "HoldBoth": "PgUp"
     },
     {
       "Trigger": "l",
       "HoldM0": "Right",
-      "HoldM1": "LControl+Right",
+      "HoldM1": "^Right",
       "HoldBoth": "End"
     }
   ],
