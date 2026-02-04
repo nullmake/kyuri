@@ -25,6 +25,19 @@ class InputProcessor {
      * @field {Map} mouseTrigger - Map of mouse buttons to actions for click events.
      */
     mouseTrigger := Map()
+    /**
+     * @field {Map} builtinActions - Registry of available special action methods.
+     */
+    builtinActions := Map()
+    /**
+     * @field {Map} optimizedRemaps - Cache of pre-parsed and validated actions.
+     * Structure: optimizedRemaps[triggerKey][layerName] = { type: "key"|"func", data: string|FuncObj }
+     */
+    optimizedRemaps := Map()
+    /**
+     * @field {Array} validationErrors - List of errors found during initialization.
+     */
+    validationErrors := []
 
     /**
      * Constructor: __New
@@ -34,13 +47,25 @@ class InputProcessor {
     __New(configSvc, logSvc) {
         this.config := configSvc
         this.log := logSvc
+        this.InitializeBuiltinActions()
         this.InitializeHotkeys()
+        this.ReportValidationResults()
+    }
+
+    /**
+     * Registers internal methods as callable special actions.
+     */
+    InitializeBuiltinActions() {
+        this.builtinActions["IMEToggle"] := this.IMEToggle
+        this.builtinActions["ImeOn"] := this.ImeOn
+        this.builtinActions["ImeOff"] := this.ImeOff
+        this.builtinActions["NextWindow"] := this.NextWindow
+        this.builtinActions["PrevWindow"] := this.PrevWindow
     }
 
     /**
      * Method: InitializeHotkeys
      * Registers modifiers, remaps, double-tap, and mouse triggers.
-     * Uses Bind to encapsulate entry data per hotkey.
      */
     InitializeHotkeys() {
         this.log.Info("Initializing dynamic hotkeys...")
@@ -48,40 +73,37 @@ class InputProcessor {
         ; 1. Register Virtual Modifiers (M0, M1)
         for modName in ["M0", "M1"] {
             vk := this.config.Get("Modifiers." . modName . ".vkCode")
-            if (vk == "") {
+            if (vk == "")
                 continue
-            }
 
-            ; Bind Press and Release.
-            ; Use '*' to allow any standard modifiers (Shift, Ctrl, etc.) to be held.
-
-            this.log.Info("Registering hotkey: " . vk . " => " . modName)
             Hotkey("*" . vk, this.OnModifierPress.Bind(this, modName))
             Hotkey("*" . vk . " up", this.OnModifierRelease.Bind(this, modName))
         }
 
-        ; 2. Register Remap Triggers (h, j, k, l, etc.)
+        ; 2. Register Remap Triggers
         remaps := this.config.Get("Remaps")
         if (remaps is Array) {
             for entry in remaps {
                 trigger := entry["Trigger"]
+                this.optimizedRemaps[trigger] := Map()
 
-                ; IMPORTANT: Bind the 'entry' object itself to the handler.
-                ; This ensures each hotkey has its own copy of the configuration data,
-                ; preventing the "all keys become 'l'" variable capture bug.
-                this.log.Info("Registering hotkey: *$" . trigger)
-                Hotkey("*$" . trigger, this.OnTrigger.Bind(this, trigger, entry))
+                for layerName in ["Tap", "HoldM0", "HoldM1", "HoldBoth"] {
+                    if entry.Has(layerName) {
+                        actionStr := entry[layerName]
+                        if (parsed := this.ParseAction(actionStr)) {
+                            this.optimizedRemaps[trigger][layerName] := parsed
+                        }
+                    }
+                }
+                Hotkey("*$" . trigger, this.OnTrigger.Bind(this, trigger))
             }
         }
 
         ; 3. Register DoubleTap Triggers
         doubleTaps := this.config.Get("Triggers.DoubleTap")
         if (doubleTaps is Map) {
-            for key, action in doubleTaps {
-                this.doubleTapTrigger[key] := action
-                ; Hotkey to capture the press for double-tap detection
-                ; The actual double-tap logic will be in OnModifierPress/OnTrigger
-                this.log.Info("Registering double-tap trigger: *" . key)
+            for key, actionName in doubleTaps {
+                this.doubleTapTrigger[key] := actionName
                 Hotkey("*" . key, this.OnDoubleTapCheck.Bind(this, key))
             }
         }
@@ -89,11 +111,86 @@ class InputProcessor {
         ; 4. Register Mouse Triggers
         mouseTriggers := this.config.Get("Triggers.Mouse")
         if (mouseTriggers is Map) {
-            for button, action in mouseTriggers {
-                this.log.Info("Registering mouse trigger: " . button . " => " . action)
-                Hotkey(button, this.OnMouseTrigger.Bind(this, button, action))
+            for button, actionName in mouseTriggers {
+                this.mouseTrigger[button] := actionName
+                Hotkey(button, this.OnMouseTrigger.Bind(this, button, actionName))
             }
         }
+    }
+
+    /**
+     * Parses an action string and validates it.
+     * @param {String} actionStr - The string from config (e.g. "^Left" or "IMEToggle()")
+     * @returns {Object|Blank} - {type: "key"|"func", data: value} or Blank on failure.
+     */
+    ParseAction(actionStr) {
+        if (actionStr == "")
+            return ""
+
+        ; Check for function form: Name()
+        if RegExMatch(actionStr, "^(\w+)\(\)$", &match) {
+            funcName := match[1]
+            if this.builtinActions.Has(funcName) {
+                return { type: "func", data: this.builtinActions[funcName] }
+            } else {
+                this.validationErrors.Push("Undefined built-in function: " . actionStr)
+                return ""
+            }
+        }
+
+        ; Otherwise, treat as key sending form: [Modifiers]Key
+        ; Separate optional modifiers (^!+#) from the key name
+        if RegExMatch(actionStr, "^([\^!+#]*)(.+)$", &match) {
+            mods := match[1]
+            keyName := match[2]
+
+            if (GetKeyVK(keyName) == 0) {
+                this.validationErrors.Push("Invalid key name: '" . keyName . "' in action '" . actionStr . "'")
+                return ""
+            }
+
+            ; Optimization: Pre-wrap keyName in braces for Send command
+            return { type: "key", data: mods . "{" . keyName . "}" }
+        }
+
+        this.validationErrors.Push("Invalid action syntax: " . actionStr)
+        return ""
+    }
+
+    /**
+     * Displays a summary of validation errors if any occurred.
+     */
+    ReportValidationResults() {
+        if (this.validationErrors.Length > 0) {
+            msg := "Kyuri Configuration Errors:`n`n"
+            for err in this.validationErrors {
+                this.log.Error(err)
+                msg .= "- " . err . "`n"
+            }
+            MsgBox(msg, "Kyuri Config Error", 48)
+        }
+    }
+
+    ; --- Built-in Special Actions (Stubs) ---
+
+    IMEToggle(*) {
+        OutputDebug("[Kyuri] Action: IMEToggle")
+    }
+
+    ImeOn(*) {
+        OutputDebug("[Kyuri] Action: ImeOn")
+    }
+
+    ImeOff(*) {
+        OutputDebug("[Kyuri] Action: ImeOff")
+    }
+
+    NextWindow(*) {
+        Send("!{Tab}")
+    }
+
+    PrevWindow(*) {
+        Send("!+{Tab}")
     }
 
     /**
@@ -165,34 +262,32 @@ class InputProcessor {
     }
 
     /**
+     * Executes a parsed action object.
+     * @param {Object} action - The parsed action object {type, data}.
+     */
+    DispatchAction(action) {
+        if (action.type == "func") {
+            action.data.Call()
+        } else {
+            ; data is already formatted like "^!{Delete}"
+            Send("{Blind}" . action.data)
+        }
+    }
+
+    /**
      * Main entry point for key processing.
      * @param {String} triggerKey - The physical key name (Injected via Bind).
-     * @param {Map/Object} entry - The config entry (Injected via Bind).
      * @param {String} _ - The actual hotkey name from AHK (unused).
      */
-    OnTrigger(triggerKey, entry, _) {
+    OnTrigger(triggerKey, _) {
         ; A_ThisHotkey := "" in OnDoubleTapCheck should prevent this from firing if a double-tap is detected.
         layer := this.GetCurrentLayer()
 
         if (layer == "Base") {
             this.HandleBaseLayer(triggerKey)
         } else {
-            this.HandleModifierLayer(triggerKey, layer, entry)
+            this.HandleModifierLayer(triggerKey, layer)
         }
-    }
-
-    /**
-     * Returns the current active layer name based on modifier states.
-     * @returns {String} "Base", "M0", "M1", or "Both"
-     */
-    GetCurrentLayer() {
-        m0 := this.modifierState["M0"]
-        m1 := this.modifierState["M1"]
-
-        if (m0 && m1) {
-            return "Both"
-        }
-        return m0 ? "M0" : (m1 ? "M1" : "Base")
     }
 
     /**
@@ -201,30 +296,27 @@ class InputProcessor {
      * @param {String} triggerKey
      */
     HandleBaseLayer(triggerKey) {
-        ; {Blind} is crucial to allow physical Shift/Ctrl to work with the key.
-        Send("{Blind}{" . triggerKey . "}")
+        if (this.optimizedRemaps.Has(triggerKey) && this.optimizedRemaps[triggerKey].Has("Tap")) {
+            this.DispatchAction(this.optimizedRemaps[triggerKey]["Tap"])
+        } else {
+            ; Pass-through to OS
+            Send("{Blind}{" . triggerKey . "}")
+        }
     }
 
     /**
      * Method: HandleModifierLayer
      * Executes remapped actions based on the active modifier layer.
      * @param {String} triggerKey
-     * @param {String} layer
-     * @param {Map/Object} entry - The config entry (Injected via Bind).
+     * @param {String} layer - "M0", "M1", or "Both"
      */
-    HandleModifierLayer(triggerKey, layer, entry) {
-        targetAction := ""
-        configKey := "Hold" . layer
+    HandleModifierLayer(triggerKey, layer) {
+        configKey := (layer == "Both") ? "HoldBoth" : "Hold" . layer
 
-        if (entry.Has(configKey)) {
-            targetAction := entry[configKey]
-        }
-
-        if (targetAction != "") {
-            ; Execute the remapped action (e.g., Send "Left" when M0+h is pressed)
-            Send("{Blind}{" . targetAction . "}")
+        if (this.optimizedRemaps.Has(triggerKey) && this.optimizedRemaps[triggerKey].Has(configKey)) {
+            this.DispatchAction(this.optimizedRemaps[triggerKey][configKey])
         } else {
-            ; Fallback to Base behavior if no specific mapping exists for this layer.
+            ; Fallback to Base behavior (which might be a Tap or pure pass-through)
             this.HandleBaseLayer(triggerKey)
         }
     }
