@@ -1,45 +1,21 @@
 #Requires AutoHotkey v2.0
 
 /**
- * Class: ImeAdapter
- * Provides methods to control Input Method Editor (IME) status.
+ * Class: Ime
+ * Pure infrastructure utility for Input Method Editor (IME) operations.
  */
-class ImeAdapter {
-    /**
-     * Toggles the current IME status.
-     */
-    IMEToggle() {
-        curr := this.GetIme()
-        this.SetIme(!curr)
-    }
-
-    /**
-     * Forces IME to ON.
-     */
-    ImeOn() {
-        this.SetIme(1)
-    }
-
-    /**
-     * Forces IME to OFF.
-     */
-    ImeOff() {
-        this.SetIme(0)
-    }
-
+class Ime {
     /**
      * Gets current IME status.
      * @param {String} winTitle - Target window (default "A")
      * @returns {Integer} 1 for ON, 0 for OFF
      */
-    GetIme(winTitle := "A") {
+    static GetStatus(winTitle := "A") {
         hwnd := WinExist(winTitle)
         if (!hwnd) {
             return 0
         }
         
-        ; Using standard AHK v2 way to get IME status via ImmGetDefaultIMEWnd
-        ; and sending WM_IME_CONTROL message.
         try {
             defaultImeWnd := DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr", hwnd, "Ptr")
             if (!defaultImeWnd) {
@@ -47,8 +23,7 @@ class ImeAdapter {
             }
             
             ; 0x0283 = WM_IME_CONTROL, 0x0005 = IMC_GETOPENSTATUS
-            res := SendMessage(0x0283, 0x0005, 0, , "ahk_id " . defaultImeWnd)
-            return res
+            return SendMessage(0x0283, 0x0005, 0, , "ahk_id " . defaultImeWnd)
         } catch {
             return 0
         }
@@ -59,7 +34,7 @@ class ImeAdapter {
      * @param {Integer} setStatus - 1 for ON, 0 for OFF
      * @param {String} winTitle - Target window (default "A")
      */
-    SetIme(setStatus, winTitle := "A") {
+    static SetStatus(setStatus, winTitle := "A") {
         hwnd := WinExist(winTitle)
         if (!hwnd) {
             return
@@ -76,17 +51,5 @@ class ImeAdapter {
         } catch {
             ; Fail silently
         }
-    }
-
-    /**
-     * Returns a Map of action names to their method references.
-     * Used by InputProcessor to collect available actions.
-     */
-    GetActions() {
-        actions := Map()
-        actions["IMEToggle"] := this.IMEToggle.Bind(this)
-        actions["ImeOn"] := this.ImeOn.Bind(this)
-        actions["ImeOff"] := this.ImeOff.Bind(this)
-        return actions
     }
 }

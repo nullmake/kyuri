@@ -15,6 +15,7 @@
 
 ; --- Adapter Layer ---
 #Include ../lib/adapter/ConfigManager.ahk
+#Include ../lib/adapter/SystemActionAdapter.ahk
 
 ; --- Core Layer ---
 #Include ../lib/core/KeyEvent.ahk

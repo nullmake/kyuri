@@ -10,8 +10,7 @@
 
 ; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
-#Include lib/adapter/ImeAdapter.ahk
-#Include lib/adapter/WindowAdapter.ahk
+#Include lib/adapter/SystemActionAdapter.ahk
 
 ; --- Core Layer ---
 #Include lib/core/KeyEvent.ahk
@@ -35,17 +34,9 @@ try {
     _configSvc := ConfigManager(A_ScriptDir)
     _configSvc.Load()
 
-    ; 4. Setup Action Adapters and collect builtin actions
-    _imeSvc := ImeAdapter()
-    _windowSvc := WindowAdapter()
-
-    _actions := Map()
-    for k, v in _imeSvc.GetActions() {
-        _actions[k] := v
-    }
-    for k, v in _windowSvc.GetActions() {
-        _actions[k] := v
-    }
+    ; 4. Setup System Actions
+    _sysActionSvc := SystemActionAdapter()
+    _actions := _sysActionSvc.GetActions()
 
     ; 5. Initialize Core Engine (InputProcessor)
     _processor := InputProcessor(_configSvc, _log, _actions)

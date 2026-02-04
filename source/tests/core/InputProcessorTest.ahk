@@ -16,9 +16,14 @@ class InputProcessorTest {
         ; Setup minimal dependencies
         this.log := Logger(A_ScriptDir, 100, 1, false) ; logging disabled
         this.config := ConfigManager(A_ScriptDir)
+        
+        ; Setup actions for testing
+        sysActionSvc := SystemActionAdapter()
+        actions := sysActionSvc.GetActions()
+
         ; Prevent real hotkey registration during tests if possible, 
         ; but for now we focus on testing ParseAction which is pure logic.
-        this.processor := InputProcessor(this.config, this.log)
+        this.processor := InputProcessor(this.config, this.log, actions)
         this.processor.validationErrors := []
     }
 
