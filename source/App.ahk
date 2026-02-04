@@ -10,6 +10,8 @@
 
 ; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
+#Include lib/adapter/ImeAdapter.ahk
+#Include lib/adapter/WindowAdapter.ahk
 
 ; --- Core Layer ---
 #Include lib/core/KeyEvent.ahk
@@ -33,10 +35,22 @@ try {
     _configSvc := ConfigManager(A_ScriptDir)
     _configSvc.Load()
 
-    ; 4. Initialize Core Engine (InputProcessor)
-    _processor := InputProcessor(_configSvc, _log)
+    ; 4. Setup Action Adapters and collect builtin actions
+    _imeSvc := ImeAdapter()
+    _windowSvc := WindowAdapter()
 
-    ; 5. Log basic environment info
+    _actions := Map()
+    for k, v in _imeSvc.GetActions() {
+        _actions[k] := v
+    }
+    for k, v in _windowSvc.GetActions() {
+        _actions[k] := v
+    }
+
+    ; 5. Initialize Core Engine (InputProcessor)
+    _processor := InputProcessor(_configSvc, _log, _actions)
+
+    ; 6. Log basic environment info
     _log.Info("Config version: " . _configSvc.Get("General.Version"))
     _log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
     _log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")

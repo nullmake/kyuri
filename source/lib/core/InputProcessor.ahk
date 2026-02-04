@@ -43,24 +43,14 @@ class InputProcessor {
      * Constructor: __New
      * @param {ConfigManager} configSvc
      * @param {Logger} logSvc
+     * @param {Map} builtinActions - Pre-registered special actions from Adapter layer.
      */
-    __New(configSvc, logSvc) {
+    __New(configSvc, logSvc, builtinActions) {
         this.config := configSvc
         this.log := logSvc
-        this.InitializeBuiltinActions()
+        this.builtinActions := builtinActions
         this.InitializeHotkeys()
         this.ReportValidationResults()
-    }
-
-    /**
-     * Registers internal methods as callable special actions.
-     */
-    InitializeBuiltinActions() {
-        this.builtinActions["IMEToggle"] := this.IMEToggle
-        this.builtinActions["ImeOn"] := this.ImeOn
-        this.builtinActions["ImeOff"] := this.ImeOff
-        this.builtinActions["NextWindow"] := this.NextWindow
-        this.builtinActions["PrevWindow"] := this.PrevWindow
     }
 
     /**
@@ -73,8 +63,9 @@ class InputProcessor {
         ; 1. Register Virtual Modifiers (M0, M1)
         for modName in ["M0", "M1"] {
             vk := this.config.Get("Modifiers." . modName . ".vkCode")
-            if (vk == "")
+            if (vk == "") {
                 continue
+            }
 
             Hotkey("*" . vk, this.OnModifierPress.Bind(this, modName))
             Hotkey("*" . vk . " up", this.OnModifierRelease.Bind(this, modName))
@@ -88,9 +79,10 @@ class InputProcessor {
                 this.optimizedRemaps[trigger] := Map()
 
                 for layerName in ["Tap", "HoldM0", "HoldM1", "HoldBoth"] {
-                    if entry.Has(layerName) {
+                    if (entry.Has(layerName)) {
                         actionStr := entry[layerName]
-                        if (parsed := this.ParseAction(actionStr)) {
+                        parsed := this.ParseAction(actionStr)
+                        if (parsed) {
                             this.optimizedRemaps[trigger][layerName] := parsed
                         }
                     }
@@ -124,13 +116,14 @@ class InputProcessor {
      * @returns {Object|Blank} - {type: "key"|"func", data: value} or Blank on failure.
      */
     ParseAction(actionStr) {
-        if (actionStr == "")
+        if (actionStr == "") {
             return ""
+        }
 
         ; Check for function form: Name()
-        if RegExMatch(actionStr, "^(\w+)\(\)$", &match) {
+        if (RegExMatch(actionStr, "^(\w+)\(\)$", &match)) {
             funcName := match[1]
-            if this.builtinActions.Has(funcName) {
+            if (this.builtinActions.Has(funcName)) {
                 return { type: "func", data: this.builtinActions[funcName] }
             } else {
                 this.validationErrors.Push("Undefined built-in function: " . actionStr)
@@ -140,7 +133,7 @@ class InputProcessor {
 
         ; Otherwise, treat as key sending form: [Modifiers]Key
         ; Separate optional modifiers (^!+#) from the key name
-        if RegExMatch(actionStr, "^([\^!+#]*)(.+)$", &match) {
+        if (RegExMatch(actionStr, "^([\^!+#]*)(.+)$", &match)) {
             mods := match[1]
             keyName := match[2]
 
@@ -169,28 +162,6 @@ class InputProcessor {
             }
             MsgBox(msg, "Kyuri Config Error", 48)
         }
-    }
-
-    ; --- Built-in Special Actions (Stubs) ---
-
-    IMEToggle(*) {
-        OutputDebug("[Kyuri] Action: IMEToggle")
-    }
-
-    ImeOn(*) {
-        OutputDebug("[Kyuri] Action: ImeOn")
-    }
-
-    ImeOff(*) {
-        OutputDebug("[Kyuri] Action: ImeOff")
-    }
-
-    NextWindow(*) {
-        Send("!{Tab}")
-    }
-
-    PrevWindow(*) {
-        Send("!+{Tab}")
     }
 
     /**
