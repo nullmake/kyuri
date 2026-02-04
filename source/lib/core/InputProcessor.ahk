@@ -244,6 +244,20 @@ class InputProcessor {
     }
 
     /**
+     * Returns the current active layer name based on modifier states.
+     * @returns {String} "Base", "M0", "M1", or "Both"
+     */
+    GetCurrentLayer() {
+        m0 := this.modifierState["M0"]
+        m1 := this.modifierState["M1"]
+
+        if (m0 && m1) {
+            return "Both"
+        }
+        return m0 ? "M0" : (m1 ? "M1" : "Base")
+    }
+
+    /**
      * Main entry point for key processing.
      * @param {String} triggerKey - The physical key name (Injected via Bind).
      * @param {String} _ - The actual hotkey name from AHK (unused).
