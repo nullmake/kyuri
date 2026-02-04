@@ -15,12 +15,16 @@
 
 ; --- Adapter Layer ---
 #Include ../lib/adapter/ConfigManager.ahk
+#Include ../lib/adapter/SystemActionAdapter.ahk
 
 ; --- Core Layer ---
+#Include ../lib/core/KeyEvent.ahk
+#Include ../lib/core/InputProcessor.ahk
 
 ; --- Test Infrastructure & Suites ---
 #Include TestRunner.ahk
 #Include adapter/ConfigManagerTest.ahk
+#Include core/InputProcessorTest.ahk
 #Include infrastructure/LoggerTest.ahk
 #Include vender/JSONUnitTest.ahk
 
@@ -41,6 +45,7 @@ try {
     _runner := TestRunner(_log)
     success := true
     success := _runner.Run(ConfigManagerTest()) && success
+    success := _runner.Run(InputProcessorTest()) && success
     success := _runner.Run(LoggerTest()) && success
     success := _runner.Run(JSONUnitTest()) && success
 

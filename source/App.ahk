@@ -10,6 +10,7 @@
 
 ; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
+#Include lib/adapter/SystemActionAdapter.ahk
 
 ; --- Core Layer ---
 #Include lib/core/KeyEvent.ahk
@@ -33,10 +34,14 @@ try {
     _configSvc := ConfigManager(A_ScriptDir)
     _configSvc.Load()
 
-    ; 4. Initialize Core Engine (InputProcessor)
-    _processor := InputProcessor(_configSvc, _log)
+    ; 4. Setup System Actions
+    _sysActionSvc := SystemActionAdapter()
+    _actions := _sysActionSvc.GetActions()
 
-    ; 5. Log basic environment info
+    ; 5. Initialize Core Engine (InputProcessor)
+    _processor := InputProcessor(_configSvc, _log, _actions)
+
+    ; 6. Log basic environment info
     _log.Info("Config version: " . _configSvc.Get("General.Version"))
     _log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
     _log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")
