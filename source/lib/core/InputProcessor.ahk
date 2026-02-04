@@ -81,7 +81,7 @@ class InputProcessor {
                 this.doubleTapTrigger[key] := action
                 ; Hotkey to capture the press for double-tap detection
                 ; The actual double-tap logic will be in OnModifierPress/OnTrigger
-                this.log.Info("Registering double-tap trigger: *$" . key)
+                this.log.Info("Registering double-tap trigger: *" . key)
                 Hotkey("*" . key, this.OnDoubleTapCheck.Bind(this, key))
             }
         }
@@ -131,7 +131,7 @@ class InputProcessor {
 
         if (this.lastTapTime.Has(key) && (currentTime - this.lastTapTime[key] < interval)) {
             ; Double tap detected
-            this.log.Info("Double tap detected for key: " . key)
+            OutputDebug("[Kyuri] Double tap detected for key: " . key)
             this.OnDoubleTap(key, this.doubleTapTrigger[key])
             this.lastTapTime.Delete(key) ; Reset for next double tap
             ; Prevent original key action for double tap
@@ -150,7 +150,7 @@ class InputProcessor {
      * @param {String} action - The action to perform (e.g., "Launcher").
      */
     OnDoubleTap(key, action) {
-        this.log.Info("Executing double-tap action: " . action . " for key: " . key)
+        OutputDebug("[Kyuri] Executing double-tap action: " . action . " for key: " . key)
         ; Placeholder for menu/action dispatch
     }
 
@@ -160,7 +160,7 @@ class InputProcessor {
      * @param {String} action - The action to perform (e.g., "Launcher").
      */
     OnMouseTrigger(button, action) {
-        this.log.Info("Executing mouse trigger action: " . action . " for button: " . button)
+        OutputDebug("[Kyuri] Executing mouse trigger action: " . action . " for button: " . button)
         ; Placeholder for menu/action dispatch
     }
 
