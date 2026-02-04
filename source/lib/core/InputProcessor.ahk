@@ -157,7 +157,7 @@ class InputProcessor {
         if (this.validationErrors.Length > 0) {
             msg := "Kyuri Configuration Errors:`n`n"
             for err in this.validationErrors {
-                this.log.Error(err)
+                this.log.Error("Configuration validation error: " . err)
                 msg .= "- " . err . "`n"
             }
             MsgBox(msg, "Kyuri Config Error", 48)

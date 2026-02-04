@@ -70,7 +70,7 @@ class Logger {
      * @param {Error} err - The Error object.
      */
     Error(message, err := unset) {
-        this.Log("ERROR", message, err)
+        this.Log("ERROR", message, err?)
         this.Flush("ERR")
     }
 
