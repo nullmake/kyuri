@@ -231,8 +231,6 @@ class InputProcessor {
             OutputDebug("[Kyuri] Double tap detected for key: " . key)
             this.OnDoubleTap(key, this.doubleTapTrigger[key])
             this.lastTapTime.Delete(key) ; Reset for next double tap
-            ; Prevent original key action for double tap
-            A_ThisHotkey := "" ; Suppress the current hotkey to prevent it from triggering single-tap action or remap
         } else {
             ; First tap, record time
             this.lastTapTime[key] := currentTime
