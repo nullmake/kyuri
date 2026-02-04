@@ -236,9 +236,11 @@ class InputProcessor {
      */
     DispatchAction(action) {
         if (action.type == "func") {
+            OutputDebug("[Kyuri] Dispatch (Func)")
             action.data.Call()
         } else {
             ; data is already formatted like "^!{Delete}"
+            OutputDebug("[Kyuri] Dispatch (Key): " . action.data)
             Send("{Blind}" . action.data)
         }
     }
@@ -283,6 +285,7 @@ class InputProcessor {
             this.DispatchAction(this.optimizedRemaps[triggerKey]["Tap"])
         } else {
             ; Pass-through to OS
+            OutputDebug("[Kyuri] Pass-through: " . triggerKey)
             Send("{Blind}{" . triggerKey . "}")
         }
     }
