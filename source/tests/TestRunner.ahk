@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 /**
  * Class: TestRunner
@@ -48,7 +48,7 @@ class TestRunner {
                     this.log.Info("    => [PASS]")
                 } catch Error as e {
                     failCount++
-                    log.Error("    => [FAIL]", e)
+                    this.log.Error("    => [FAIL]", e)
                 } finally {
                     ; Run Teardown if exists
                     if HasMethod(testSuite, "Teardown")
