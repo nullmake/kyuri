@@ -1,149 +1,147 @@
 #Requires AutoHotkey v2.0
 
+#Include LayerType.ahk
+#Include KeyActionType.ahk
+#Include ModifierState.ahk
+#Include KeyAction.ahk
+#Include LayerRemap.ahk
+#Include KeyState.ahk
+
 /**
- * Class: InputProcessor
+ * @class InputProcessor
  * Logic engine that dispatches actions based on modifier states and configuration.
+ * Re-implemented to use KeyboardHook for zero-latency and full control.
  */
 class InputProcessor {
-    /** @field {ConfigManager} config - Reference to config adapter */
-    config := ""
     /** @field {Logger} log - Application logger instance */
     log := ""
-    /**
-     * @field {Map} modifierState - Current hold state of virtual modifiers (M0, M1).
-     */
-    modifierState := Map("M0", false, "M1", false)
-    /**
-     * @field {Map} lastTapTime - Records the last tap time for each key to detect double taps.
-     */
-    lastTapTime := Map()
-    /**
-     * @field {Map} doubleTapTrigger - Map of keys to actions for double tap events.
-     */
-    doubleTapTrigger := Map()
-    /**
-     * @field {Map} mouseTrigger - Map of mouse buttons to actions for click events.
-     */
-    mouseTrigger := Map()
-    /**
-     * @field {Map} builtinActions - Registry of available special action methods.
-     */
+    /** @field {SystemActionAdapter} sysActionSvc - Reference to system action adapter */
+    sysActionSvc := ""
+    /** @field {Map} builtinActions - Registry of available special action methods */
     builtinActions := Map()
-    /**
-     * @field {Map} optimizedRemaps - Cache of pre-parsed and validated actions.
-     * Structure: optimizedRemaps[triggerKey][layerName] = { type: "key"|"func", data: string|FuncObj }
-     */
-    optimizedRemaps := Map()
-    /**
-     * @field {Array} validationErrors - List of errors found during initialization.
-     */
+
+    /** @field {ModifierState} m0 - State for virtual modifier 0 */
+    m0 := ModifierState("M0")
+    /** @field {ModifierState} m1 - State for virtual modifier 1 */
+    m1 := ModifierState("M1")
+    /** @field {Map} vkToMod - Mapping of vkCode to ModifierState object */
+    vkToMod := Map()
+
+    /** @field {ModifierState} oneshotCandidate - The mod key that might trigger a one-shot action */
+    oneshotCandidate := ""
+    /** @field {Integer} doublePressInterval - Max time between taps for double-tap detection */
+    doublePressInterval := 300
+
+    /** @field {Map} remaps - Mapping of physical key to LayerRemap instance */
+    remaps := Map()
+    /** @field {Map} keyStates - Mapping of physical key to KeyState instance */
+    keyStates := Map()
+
+    /** @field {Array} validationErrors - List of errors found during initialization */
     validationErrors := []
 
     /**
-     * Constructor: __New
+     * @method __New
+     * @constructor
      * @param {ConfigManager} configSvc
      * @param {Logger} logSvc
-     * @param {Map} builtinActions - Pre-registered special actions from Adapter layer.
+     * @param {SystemActionAdapter} sysActionSvc
      */
-    __New(configSvc, logSvc, builtinActions) {
-        this.config := configSvc
+    __New(configSvc, logSvc, sysActionSvc) {
         this.log := logSvc
-        this.builtinActions := builtinActions
-        this.InitializeHotkeys()
+        this.sysActionSvc := sysActionSvc
+        this.builtinActions := sysActionSvc.GetActions()
+        this.Initialize(configSvc)
         this.ReportValidationResults()
     }
 
     /**
-     * Method: InitializeHotkeys
-     * Registers modifiers, remaps, double-tap, and mouse triggers.
+     * @method Initialize
+     * Loads configuration and prepares internal data structures.
+     * @param {ConfigManager} configSvc
      */
-    InitializeHotkeys() {
-        this.log.Info("Initializing dynamic hotkeys...")
+    Initialize(configSvc) {
+        this.log.Info("Initializing InputProcessor...")
 
-        ; 1. Register Virtual Modifiers (M0, M1)
-        for modName in ["M0", "M1"] {
-            vk := this.config.Get("Modifiers." . modName . ".vkCode")
+        this.doublePressInterval := configSvc.Get("Modifiers.M0.DoublePressInterval", 300)
+
+        ; 1. Load Modifiers
+        mods := Map("M0", this.m0, "M1", this.m1)
+        for modName, modObj in mods {
+            vk := configSvc.Get("Modifiers." . modName . ".vkCode")
             if (vk == "") {
                 continue
             }
-
-            Hotkey("*" . vk, this.OnModifierPress.Bind(this, modName))
-            Hotkey("*" . vk . " up", this.OnModifierRelease.Bind(this, modName))
+            modObj.VkCode := vk
+            modObj.FallbackKey := configSvc.Get("Modifiers." . modName . ".Fallback", "")
+            this.vkToMod[vk] := modObj
         }
 
-        ; 2. Register Remap Triggers
-        remaps := this.config.Get("Remaps")
-        if (remaps is Array) {
-            for entry in remaps {
-                trigger := entry["Trigger"]
-                this.optimizedRemaps[trigger] := Map()
-
-                for layerName in ["Tap", "HoldM0", "HoldM1", "HoldBoth"] {
-                    if (entry.Has(layerName)) {
-                        actionStr := entry[layerName]
-                        parsed := this.ParseAction(actionStr)
-                        if (parsed) {
-                            this.optimizedRemaps[trigger][layerName] := parsed
-                        }
-                    }
-                }
-                Hotkey("*$" . trigger, this.OnTrigger.Bind(this, trigger))
-            }
-        }
-
-        ; 3. Register DoubleTap Triggers
-        doubleTaps := this.config.Get("Triggers.DoubleTap")
+        ; 2. Load DoubleTap Triggers
+        doubleTaps := configSvc.Get("Triggers.DoubleTap")
         if (doubleTaps is Map) {
             for key, actionName in doubleTaps {
-                this.doubleTapTrigger[key] := actionName
-                Hotkey("*" . key, this.OnDoubleTapCheck.Bind(this, key))
+                if (this.vkToMod.Has(key)) {
+                    this.vkToMod[key].DoubleTapAction := actionName
+                }
             }
         }
 
-        ; 4. Register Mouse Triggers
-        mouseTriggers := this.config.Get("Triggers.Mouse")
-        if (mouseTriggers is Map) {
-            for button, actionName in mouseTriggers {
-                this.mouseTrigger[button] := actionName
-                Hotkey(button, this.OnMouseTrigger.Bind(this, button, actionName))
+        ; 3. Load Remaps
+        remapsConfig := configSvc.Get("Remaps")
+        if (remapsConfig is Array) {
+            for entry in remapsConfig {
+                trigger := entry["Trigger"]
+                remap := LayerRemap()
+
+                if (entry.Has("Tap")) {
+                    remap.Tap := this.ParseAction(entry["Tap"], trigger)
+                }
+                if (entry.Has("HoldM0")) {
+                    remap.HoldM0 := this.ParseAction(entry["HoldM0"], trigger)
+                }
+                if (entry.Has("HoldM1")) {
+                    remap.HoldM1 := this.ParseAction(entry["HoldM1"], trigger)
+                }
+                if (entry.Has("HoldBoth")) {
+                    remap.HoldBoth := this.ParseAction(entry["HoldBoth"], trigger)
+                }
+
+                this.remaps[trigger] := remap
             }
         }
     }
 
     /**
-     * Parses an action string and validates it.
-     * @param {String} actionStr - The string from config (e.g. "^Left" or "IMEToggle()")
-     * @returns {Object|Blank} - {type: "key"|"func", data: value} or Blank on failure.
+     * @method ParseAction
+     * Parses an action string from configuration.
+     * @param {String} actionStr - The action string.
+     * @param {String} trigger - The key name associated with this remap.
+     * @returns {KeyAction|Blank} - KeyAction object or Blank on failure.
      */
-    ParseAction(actionStr) {
+    ParseAction(actionStr, trigger) {
         if (actionStr == "") {
             return ""
         }
 
-        ; Check for function form: Name()
         if (RegExMatch(actionStr, "^(\w+)\(\)$", &match)) {
             funcName := match[1]
             if (this.builtinActions.Has(funcName)) {
-                return { type: "func", data: this.builtinActions[funcName] }
+                return KeyAction(KeyActionType.FUNC, this.builtinActions[funcName], trigger)
             } else {
                 this.validationErrors.Push("Undefined built-in function: " . actionStr)
                 return ""
             }
         }
 
-        ; Otherwise, treat as key sending form: [Modifiers]Key
-        ; Separate optional modifiers (^!+#) from the key name
         if (RegExMatch(actionStr, "^([\^!+#]*)(.+)$", &match)) {
             mods := match[1]
             keyName := match[2]
-
             if (GetKeyVK(keyName) == 0) {
                 this.validationErrors.Push("Invalid key name: '" . keyName . "' in action '" . actionStr . "'")
                 return ""
             }
-
-            ; Optimization: Pre-wrap keyName in braces for Send command
-            return { type: "key", data: mods . "{" . keyName . "}" }
+            return KeyAction(KeyActionType.KEY, mods . "{" . keyName . "}", trigger)
         }
 
         this.validationErrors.Push("Invalid action syntax: " . actionStr)
@@ -151,6 +149,7 @@ class InputProcessor {
     }
 
     /**
+     * @method ReportValidationResults
      * Displays a summary of validation errors if any occurred.
      */
     ReportValidationResults() {
@@ -165,145 +164,266 @@ class InputProcessor {
     }
 
     /**
-     * Callback for modifier press.
-     * @param {String} modName - Injected via Bind (e.g., "M0").
-     * @param {String} _ - Hotkey name passed by AHK (unused).
+     * @method ProcessKeyEvent
+     * Main event handler called by KeyboardHook.
+     * @param {KeyEvent} event
+     * @returns {Integer} 1 to suppress, 0 to pass-through.
      */
-    OnModifierPress(modName, _) {
-        this.modifierState[modName] := true
-    }
-
-    /**
-     * Callback for modifier release.
-     * @param {String} modName - Injected via Bind (e.g., "M0").
-     * @param {String} _ - Hotkey name passed by AHK (unused).
-     */
-    OnModifierRelease(modName, _) {
-        this.modifierState[modName] := false
-    }
-
-    /**
-     * Intermediate handler for double-tap detection on relevant keys.
-     * This will call OnDoubleTap if a double-tap is detected.
-     * @param {String} key - The physical key name.
-     * @param {String} _ - Hotkey name passed by AHK (unused).
-     * @param {Integer} isLongPress - 1 if this is a long press, 0 otherwise.
-     */
-    OnDoubleTapCheck(key, _, isLongPress) {
-        if (isLongPress) { ; This is a placeholder, actual long press detection might be different
-            return ; Don't process as double-tap if it's a long press for a remap
+    ProcessKeyEvent(event) {
+        ; Ignore artificial inputs to avoid infinite loops
+        if (!event.IsPhysical) {
+            return 0
         }
-        
-        interval := this.config.Get("Modifiers.M0.DoublePressInterval", 300) ; Use M0's interval for now, or a global one
-        currentTime := A_TickCount
 
-        if (this.lastTapTime.Has(key) && (currentTime - this.lastTapTime[key] < interval)) {
-            ; Double tap detected
-            OutputDebug("[Kyuri] Double tap detected for key: " . key)
-            this.OnDoubleTap(key, this.doubleTapTrigger[key])
-            this.lastTapTime.Delete(key) ; Reset for next double tap
+        keyName := event.Name
+        isDown := event.IsDown
+
+        ; 1. Check if it's a virtual modifier (M0/M1)
+        if (this.vkToMod.Has(keyName)) {
+            mod := this.vkToMod[keyName]
+            if (isDown) {
+                this.HandleModifierDown(mod)
+            } else {
+                this.HandleModifierUp(mod)
+            }
+            return 1 ; Always suppress M0/M1 physical keys
+        }
+
+        ; 2. Handle other keys
+        if (isDown) {
+            return this.HandleKeyDown(keyName)
         } else {
-            ; First tap, record time
-            this.lastTapTime[key] := currentTime
-            ; Allow original key action for single tap if no remap.
-            ; This part needs careful integration with OnTrigger to avoid conflicts.
+            return this.HandleKeyUp(keyName)
         }
     }
 
     /**
-     * Handler for double-tap events.
-     * @param {String} key - The key that was double-tapped.
-     * @param {String} action - The action to perform (e.g., "Launcher").
+     * @method HandleModifierDown
+     * Handler for virtual modifier press.
+     * @param {ModifierState} mod - The modifier state object.
      */
-    OnDoubleTap(key, action) {
-        OutputDebug("[Kyuri] Executing double-tap action: " . action . " for key: " . key)
-        ; Placeholder for menu/action dispatch
+    HandleModifierDown(mod) {
+        OutputDebug("[Kyuri] Modifier Down: " . mod.Name)
+        mod.IsHeld := true
+        this.oneshotCandidate := mod
+        mod.FallbackSent := false
     }
 
     /**
-     * Handler for mouse trigger events.
-     * @param {String} button - The mouse button (e.g., "MButton").
-     * @param {String} action - The action to perform (e.g., "Launcher").
+     * @method HandleModifierUp
+     * Handler for virtual modifier release.
+     * @param {ModifierState} mod - The modifier state object.
      */
-    OnMouseTrigger(button, action) {
-        OutputDebug("[Kyuri] Executing mouse trigger action: " . action . " for button: " . button)
-        ; Placeholder for menu/action dispatch
+    HandleModifierUp(mod) {
+        OutputDebug("[Kyuri] Modifier Up: " . mod.Name)
+        mod.IsHeld := false
+
+        ; DoubleTap detection
+        if (this.oneshotCandidate == mod) {
+            currentTime := A_TickCount
+            if (currentTime - mod.LastTapTime < this.doublePressInterval) {
+                this.ExecuteDoubleTap(mod)
+                mod.LastTapTime := 0
+            } else {
+                mod.LastTapTime := currentTime
+                ; One-shot logic could go here if needed
+            }
+        }
+
+        ; Release fallback key if it was sent
+        if (mod.FallbackSent) {
+            if (mod.FallbackKey != "") {
+                OutputDebug("[Kyuri] Releasing Fallback: " . mod.FallbackKey)
+                this.Send("{" . mod.FallbackKey . " up}")
+            }
+            mod.FallbackSent := false
+        }
+
+        this.oneshotCandidate := ""
     }
 
     /**
-     * Executes a parsed action object.
-     * @param {Object} action - The parsed action object {type, data}.
+     * @method HandleKeyDown
+     * Handler for physical key down events (non-modifier).
+     * @param {String} keyName - The name of the key.
+     * @returns {Integer} 1 to suppress, 0 to pass-through.
      */
-    DispatchAction(action) {
-        if (action.type == "func") {
-            OutputDebug("[Kyuri] Dispatch (Func)")
-            action.data.Call()
-        } else {
-            ; data is already formatted like "^!{Delete}"
-            OutputDebug("[Kyuri] Dispatch (Key): " . action.data)
-            Send("{Blind}" . action.data)
+    HandleKeyDown(keyName) {
+        this.oneshotCandidate := "" ; Any key press cancels one-shot
+
+        layer := this.GetCurrentLayer()
+        action := ""
+
+        ; Check for remap in current layer
+        if (this.remaps.Has(keyName)) {
+            action := this.GetActionForLayer(keyName, layer)
+        }
+
+        if (action) {
+            ; Interrupted by specific remap? Clear active fallbacks first.
+            this.ClearActiveFallbacks()
+            this.GetKeyState(keyName).IsSuppressed := true
+            this.DispatchAction(action)
+            return 1
+        }
+
+        ; No remap: Handle Fallback if in Modifier layer
+        if (layer != LayerType.BASE) {
+            this.GetKeyState(keyName).IsSuppressed := true
+            this.HandleFallback(keyName, layer)
+            return 1
+        }
+
+        ; Base layer and no remap: Pass-through
+        OutputDebug("[Kyuri] Pass-through: " . keyName)
+        return 0
+    }
+
+    /**
+     * @method HandleKeyUp
+     * Handler for physical key up events (non-modifier).
+     * @param {String} keyName - The name of the key.
+     * @returns {Integer} 1 to suppress, 0 to pass-through.
+     */
+    HandleKeyUp(keyName) {
+        if (this.keyStates.Has(keyName)) {
+            state := this.keyStates[keyName]
+            if (state.IsSuppressed) {
+                state.IsSuppressed := false
+                OutputDebug("[Kyuri] Releasing suppressed key: " . keyName)
+                this.Send("{" . keyName . " up}")
+                return 1
+            }
+        }
+        return 0
+    }
+
+    /**
+     * @method GetKeyState
+     * Retrieves or creates the KeyState object for a specific key.
+     * @param {String} keyName - The physical key name.
+     * @returns {KeyState}
+     */
+    GetKeyState(keyName) {
+        if (!this.keyStates.Has(keyName)) {
+            this.keyStates[keyName] := KeyState()
+        }
+        return this.keyStates[keyName]
+    }
+
+    /**
+     * @method ClearActiveFallbacks
+     * Releases any virtual fallback modifiers currently sent.
+     * This is used when a remapped key is pressed while a fallback modifier is held.
+     */
+    ClearActiveFallbacks() {
+        for mod in [this.m0, this.m1] {
+            if (mod.FallbackSent) {
+                if (mod.FallbackKey != "") {
+                    OutputDebug("[Kyuri] Interrupted: Releasing Fallback " . mod.FallbackKey)
+                    this.Send("{" . mod.FallbackKey . " up}")
+                }
+                mod.FallbackSent := false
+            }
         }
     }
 
     /**
-     * Returns the current active layer name based on modifier states.
-     * @returns {String} "Base", "M0", "M1", or "Both"
+     * @method GetCurrentLayer
+     * Determines the current active layer based on modifier hold states.
+     * @returns {Integer} One of LayerType constants.
      */
     GetCurrentLayer() {
-        m0 := this.modifierState["M0"]
-        m1 := this.modifierState["M1"]
-
-        if (m0 && m1) {
-            return "Both"
+        if (this.m0.IsHeld && this.m1.IsHeld) {
+            return LayerType.BOTH
         }
-        return m0 ? "M0" : (m1 ? "M1" : "Base")
+        if (this.m0.IsHeld) {
+            return LayerType.M0
+        }
+        if (this.m1.IsHeld) {
+            return LayerType.M1
+        }
+        return LayerType.BASE
     }
 
     /**
-     * Main entry point for key processing.
-     * @param {String} triggerKey - The physical key name (Injected via Bind).
-     * @param {String} _ - The actual hotkey name from AHK (unused).
+     * @method GetActionForLayer
+     * Retrieves the remapped action for a specific key and layer.
+     * @param {String} keyName - The physical key name.
+     * @param {Integer} layer - Current active layer ID.
+     * @returns {KeyAction|Blank} The action object or empty string.
      */
-    OnTrigger(triggerKey, _) {
-        ; A_ThisHotkey := "" in OnDoubleTapCheck should prevent this from firing if a double-tap is detected.
-        layer := this.GetCurrentLayer()
+    GetActionForLayer(keyName, layer) {
+        remap := this.remaps[keyName]
 
-        if (layer == "Base") {
-            this.HandleBaseLayer(triggerKey)
+        targetAction := ""
+        switch layer {
+            case LayerType.BOTH: targetAction := remap.HoldBoth
+            case LayerType.M0:   targetAction := remap.HoldM0
+            case LayerType.M1:   targetAction := remap.HoldM1
+        }
+
+        ; Fallback to Tap if specific hold action not defined
+        return targetAction ? targetAction : remap.Tap
+    }
+
+    /**
+     * @method HandleFallback
+     * Handles fallback behavior when a modifier is held but no remap is defined.
+     * @param {String} keyName - The physical key name.
+     * @param {Integer} layer - Current active layer ID.
+     */
+    HandleFallback(keyName, layer) {
+        ; Send fallback modifier if not already sent
+        for mod in [this.m0, this.m1] {
+            if (mod.IsHeld && !mod.FallbackSent) {
+                if (mod.FallbackKey != "") {
+                    OutputDebug("[Kyuri] Holding Fallback: " . mod.FallbackKey)
+                    this.Send("{" . mod.FallbackKey . " down}")
+                    mod.FallbackSent := true
+                }
+            }
+        }
+        ; Send the original key
+        OutputDebug("[Kyuri] Fallback: " . keyName . " (Layer: " . layer . ")")
+        this.Send("{" . keyName . " down}")
+    }
+
+    /**
+     * @method Send
+     * Low-level key sending with project-standard flags.
+     * This method can be overridden in tests using DefineProp.
+     * @param {String} keyStr - AHK-compatible key string.
+     */
+    Send(keyStr) {
+        Send("{Blind}" . keyStr)
+    }
+
+    /**
+     * @method DispatchAction
+     * Executes a parsed action.
+     * @param {KeyAction} action - The action object.
+     */
+    DispatchAction(action) {
+        if (action.Type == KeyActionType.FUNC) {
+            OutputDebug("[Kyuri] Remap: " . action.Trigger . " -> Func")
+            action.Data.Call()
         } else {
-            this.HandleModifierLayer(triggerKey, layer)
+            OutputDebug("[Kyuri] Remap: " . action.Trigger . " -> " . action.Data)
+            ; action.Data is like "^!{Left}"
+            this.Send(action.Data)
         }
     }
 
     /**
-     * Method: HandleBaseLayer
-     * Standard key pass-through when no virtual modifiers are held.
-     * @param {String} triggerKey
+     * @method ExecuteDoubleTap
+     * Executes the action associated with a double-tap event.
+     * @param {ModifierState} mod - The modifier state object that was double-tapped.
      */
-    HandleBaseLayer(triggerKey) {
-        if (this.optimizedRemaps.Has(triggerKey) && this.optimizedRemaps[triggerKey].Has("Tap")) {
-            this.DispatchAction(this.optimizedRemaps[triggerKey]["Tap"])
-        } else {
-            ; Pass-through to OS
-            OutputDebug("[Kyuri] Pass-through: " . triggerKey)
-            Send("{Blind}{" . triggerKey . "}")
-        }
-    }
-
-    /**
-     * Method: HandleModifierLayer
-     * Executes remapped actions based on the active modifier layer.
-     * @param {String} triggerKey
-     * @param {String} layer - "M0", "M1", or "Both"
-     */
-    HandleModifierLayer(triggerKey, layer) {
-        configKey := (layer == "Both") ? "HoldBoth" : "Hold" . layer
-
-        if (this.optimizedRemaps.Has(triggerKey) && this.optimizedRemaps[triggerKey].Has(configKey)) {
-            this.DispatchAction(this.optimizedRemaps[triggerKey][configKey])
-        } else {
-            ; Fallback to Base behavior (which might be a Tap or pure pass-through)
-            this.HandleBaseLayer(triggerKey)
+    ExecuteDoubleTap(mod) {
+        if (mod.DoubleTapAction != "") {
+            this.log.Info("DoubleTap detected: " . mod.Name . " -> " . mod.DoubleTapAction)
+            ; TODO: Dispatch to MenuManager when implemented
         }
     }
 }
