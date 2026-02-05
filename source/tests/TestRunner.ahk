@@ -61,4 +61,3 @@ class TestRunner {
         return (failCount == 0)
     }
 }
-

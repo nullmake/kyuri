@@ -15,13 +15,13 @@ class Ime {
         if (!hwnd) {
             return 0
         }
-        
+
         try {
             defaultImeWnd := DllCall("imm32\ImmGetDefaultIMEWnd", "Ptr", hwnd, "Ptr")
             if (!defaultImeWnd) {
                 return 0
             }
-            
+
             ; 0x0283 = WM_IME_CONTROL, 0x0005 = IMC_GETOPENSTATUS
             return SendMessage(0x0283, 0x0005, 0, , "ahk_id " . defaultImeWnd)
         } catch {
@@ -45,7 +45,7 @@ class Ime {
             if (!defaultImeWnd) {
                 return
             }
-            
+
             ; 0x0283 = WM_IME_CONTROL, 0x006 = IMC_SETOPENSTATUS
             SendMessage(0x0283, 0x006, setStatus, , "ahk_id " . defaultImeWnd)
         } catch {

@@ -359,8 +359,8 @@ class InputProcessor {
         targetAction := ""
         switch layer {
             case LayerType.BOTH: targetAction := remap.HoldBoth
-            case LayerType.M0:   targetAction := remap.HoldM0
-            case LayerType.M1:   targetAction := remap.HoldM1
+            case LayerType.M0: targetAction := remap.HoldM0
+            case LayerType.M1: targetAction := remap.HoldM1
         }
 
         ; Fallback to Tap if specific hold action not defined

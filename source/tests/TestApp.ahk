@@ -62,4 +62,3 @@ try {
 ; 4. Finalize
 _log.Flush("TEST_END")
 ExitApp(success ? 0 : 1)
-

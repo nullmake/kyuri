@@ -68,4 +68,3 @@ try {
 ^!e:: {
     throw Error("Simulated uncaught exception for debugging.")
 }
-

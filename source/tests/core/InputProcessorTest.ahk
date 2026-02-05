@@ -9,7 +9,7 @@
 class MockSystemActionAdapter extends SystemActionAdapter {
     /** @field {Array} callHistory - Recorded names of called methods */
     callHistory := []
-    
+
     /**
      * @method IMEToggle
      * Mocked IME toggle that records the call.
@@ -54,7 +54,7 @@ class InputProcessorTest {
     Setup() {
         this.log := Logger(A_ScriptDir, 100, 1, false)
         this.config := ConfigManager(A_ScriptDir)
-        
+
         ; Setup a controlled configuration for testing
         this.config.settings := Map(
             "Modifiers", Map(
@@ -70,14 +70,14 @@ class InputProcessorTest {
                 Map("Trigger", "vkF0", "Tap", "IMEToggle()")
             ]
         )
-        
+
         this.mockSys := MockSystemActionAdapter()
         this.processor := InputProcessor(this.config, this.log, this.mockSys)
-        
+
         ; Override only the LowLevelSend method using DefineProp to intercept final key output
         this.sentKeys := []
-        this.processor.DefineProp("LowLevelSend", { 
-            Call: (obj, keyStr) => this.sentKeys.Push(keyStr) 
+        this.processor.DefineProp("LowLevelSend", {
+            Call: (obj, keyStr) => this.sentKeys.Push(keyStr)
         })
     }
 
@@ -124,7 +124,7 @@ class InputProcessorTest {
     Test_M0_Hold_NoRemap_ShouldFallbackToModifier() {
         ; 1. M0 Down
         this.processor.ProcessKeyEvent(KeyEvent("vk1D", true, true))
-        
+
         ; 2. 'x' Down (No remap for 'x')
         ; Should send Fallback (LAlt) and 'x'
         res := this.processor.ProcessKeyEvent(KeyEvent("x", true, true))
@@ -152,7 +152,7 @@ class InputProcessorTest {
     Test_Remap_ShouldClearActiveFallbacks() {
         ; 1. M1 Down
         this.processor.ProcessKeyEvent(KeyEvent("vk1C", true, true))
-        
+
         ; 2. 'i' Down (Unregistered, triggers LControl fallback)
         this.processor.ProcessKeyEvent(KeyEvent("i", true, true))
         Assert.Equal("{Blind}{LControl down}", this.sentKeys[1])
@@ -166,7 +166,7 @@ class InputProcessorTest {
         ; 4. 'j' Down (Registered: HoldM1 -> +Down)
         ; This should trigger ClearActiveFallbacks and release LControl
         this.processor.ProcessKeyEvent(KeyEvent("j", true, true))
-        
+
         Assert.Equal("{Blind}{LControl up}", this.sentKeys[4], "Should release LControl before remapping.")
         Assert.False(this.processor.m1.FallbackSent, "FallbackSent flag should be cleared.")
         Assert.Equal("{Blind}+{Down}", this.sentKeys[5], "Should then send remapped key.")
