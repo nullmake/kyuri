@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 /**
  * Test Application Entry Point
@@ -18,7 +18,7 @@
 #Include ../lib/adapter/SystemActionAdapter.ahk
 
 ; --- Core Layer ---
-#Include ../lib/core/KeyEvent.ahk
+#Include ../lib/infrastructure/KeyEvent.ahk
 #Include ../lib/core/InputProcessor.ahk
 
 ; --- Test Infrastructure & Suites ---
@@ -56,9 +56,10 @@ try {
     }
 
 } catch Error as e {
-    _Log.Error("Test Runner crashed.", e)
+    _log.Error("Test Runner crashed.", e)
 }
 
 ; 4. Finalize
 _log.Flush("TEST_END")
-MsgBox("Tests completed. Check 'source/tests/log/' for results.", "Kyuri Test", 64)
+ExitApp(success ? 0 : 1)
+

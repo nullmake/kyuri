@@ -391,12 +391,20 @@ class InputProcessor {
 
     /**
      * @method Send
-     * Low-level key sending with project-standard flags.
-     * This method can be overridden in tests using DefineProp.
-     * @param {String} keyStr - AHK-compatible key string.
+     * Sends a key with project-standard flags.
+     * @param {String} keyStr - Key string to send.
      */
     Send(keyStr) {
-        Send("{Blind}" . keyStr)
+        this.LowLevelSend("{Blind}" . keyStr)
+    }
+
+    /**
+     * @method LowLevelSend
+     * Final stage of key sending. This method can be overridden in tests.
+     * @param {String} finalStr - The exact string to pass to AHK's Send.
+     */
+    LowLevelSend(finalStr) {
+        Send(finalStr)
     }
 
     /**
