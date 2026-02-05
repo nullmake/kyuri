@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 ; --- Vendor Libraries ---
 #Include lib/vendor/JSON.ahk
@@ -7,13 +7,14 @@
 #Include lib/infrastructure/ServiceLocator.ahk
 #Include lib/infrastructure/Logger.ahk
 #Include lib/infrastructure/GlobalErrorHandler.ahk
+#Include lib/infrastructure/KeyEvent.ahk
+#Include lib/infrastructure/KeyboardHook.ahk
 
 ; --- Adapter Layer ---
 #Include lib/adapter/ConfigManager.ahk
 #Include lib/adapter/SystemActionAdapter.ahk
 
 ; --- Core Layer ---
-#Include lib/core/KeyEvent.ahk
 #Include lib/core/InputProcessor.ahk
 
 /**
@@ -36,18 +37,21 @@ try {
 
     ; 4. Setup System Actions
     _sysActionSvc := SystemActionAdapter()
-    _actions := _sysActionSvc.GetActions()
 
     ; 5. Initialize Core Engine (InputProcessor)
-    _processor := InputProcessor(_configSvc, _log, _actions)
+    _processor := InputProcessor(_configSvc, _log, _sysActionSvc)
 
-    ; 6. Log basic environment info
+    ; 6. Setup Keyboard Hook
+    _hook := KeyboardHook(_processor.ProcessKeyEvent.Bind(_processor))
+    _hook.Start()
+
+    ; 7. Log basic environment info
     _log.Info("Config version: " . _configSvc.Get("General.Version"))
     _log.Info("Process ID: " . DllCall("GetCurrentProcessId"))
-    _log.Info("Kyuri is now running and ready (Direct Hotkey Mode).")
+    _log.Info("Kyuri is now running and ready (Keyboard Hook Mode).")
 
 } catch Error as e {
-    _Log.Error("Initialization failed: ", e)
+    _log.Error("Initialization failed: ", e)
     MsgBox("Kyuri failed to start.`nCheck the log folder for details.", "Critical Error", 16)
     ExitApp()
 }
@@ -64,3 +68,4 @@ try {
 ^!e:: {
     throw Error("Simulated uncaught exception for debugging.")
 }
+
