@@ -1,14 +1,19 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 /**
  * Class: KeyboardHook
  * Adapter Layer that encapsulates WH_KEYBOARD_LL.
  */
 class KeyboardHook {
+    /** @field {Integer} WH_KEYBOARD_LL - Windows Hook ID for Low-Level Keyboard Hook */
     static WH_KEYBOARD_LL := 13
+    /** @field {Integer} WM_KEYDOWN - Message ID for Key Down */
     static WM_KEYDOWN := 0x0100
+    /** @field {Integer} WM_KEYUP - Message ID for Key Up */
     static WM_KEYUP := 0x0101
+    /** @field {Integer} WM_SYSKEYDOWN - Message ID for System Key Down */
     static WM_SYSKEYDOWN := 0x0104
+    /** @field {Integer} WM_SYSKEYUP - Message ID for System Key Up */
     static WM_SYSKEYUP := 0x0105
 
     /** @field {Integer} hHook - Handle to the Windows Hook */
@@ -69,24 +74,30 @@ class KeyboardHook {
 
     /**
      * Low-level Hook Callback Procedure.
+     * @param {Integer} nCode
+     * @param {Integer} wParam
+     * @param {Integer} lParam
      * @private
      */
     _LowLevelKeyboardProc(nCode, wParam, lParam) {
         try {
             if (nCode >= 0) {
-                this._HandleRawInput(wParam, lParam)
+                if (this._HandleRawInput(wParam, lParam)) {
+                    return 1
+                }
             }
         } catch Any as e {
             this._SafeLog(e)
         }
 
-        return DllCall("CallNextHookEx", "Ptr", this.hHook, "Int", nCode, "Ptr", wParam, "Ptr", lParam)
+        return DllCall("CallNextHookEx", "Ptr", 0, "Int", nCode, "Ptr", wParam, "Ptr", lParam, "Ptr")
     }
 
     /**
      * Parse raw input and dispatch as KeyEvent.
      * @param {Integer} wParam - Message ID (WM_KEYDOWN, etc.)
      * @param {Ptr} lParam - Pointer to KBDLLHOOKSTRUCT
+     * @returns {Integer} 1 to suppress the event, 0 to allow it.
      * @private
      */
     _HandleRawInput(wParam, lParam) {
@@ -113,10 +124,15 @@ class KeyboardHook {
 
         ; Dispatch via injected callback
         if (this.onEvent) {
-            this.onEvent(event)
+            return this.onEvent.Call(event)
         }
+        return 0
     }
 
+    /**
+     * Logs error messages to the debug output without external dependencies.
+     * @param {Error} err - The error object to log.
+     */
     _SafeLog(err) {
         ; Use OutputDebug to avoid dependency on Logger class
         OutputDebug("Kyuri Hook Error: " . err.Message . " (" . err.Line . ")")
