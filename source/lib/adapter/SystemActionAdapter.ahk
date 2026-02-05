@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 
 #Include ../infrastructure/Ime.ahk
 #Include ../infrastructure/Window.ahk
@@ -10,23 +10,26 @@
 class SystemActionAdapter {
     /**
      * Toggles the current IME status.
+     * @param {Any} params* - Variadic parameters.
      */
-    IMEToggle(*) {
+    IMEToggle(params*) {
         curr := Ime.GetStatus()
         Ime.SetStatus(!curr)
     }
 
     /**
      * Forces IME to ON.
+     * @param {Any} params* - Variadic parameters.
      */
-    ImeOn(*) {
+    ImeOn(params*) {
         Ime.SetStatus(1)
     }
 
     /**
      * Forces IME to OFF.
+     * @param {Any} params* - Variadic parameters.
      */
-    ImeOff(*) {
+    ImeOff(params*) {
         Ime.SetStatus(0)
     }
 
@@ -44,3 +47,4 @@ class SystemActionAdapter {
         return actions
     }
 }
+
