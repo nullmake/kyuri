@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 ; --- Vendor Libraries ---
 #Include lib/vendor/JSON.ahk
