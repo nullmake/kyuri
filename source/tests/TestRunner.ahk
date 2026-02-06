@@ -1,12 +1,15 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 /**
- * Class: TestRunner
+ * @class TestRunner
  * Basic xUnit-style test executor for AutoHotkey v2.
+ * Collects and reports summaries per test suite.
  */
 class TestRunner {
-    /** @field {Logger} logger - Renamed from 'log' to avoid conflict */
+    /** @field {Logger} log - Application logger instance */
     log := ""
+    /** @field {Array} suiteResults - Collection of {Name, Pass, Fail} objects */
+    suiteResults := []
 
     /**
      * Constructor: __New
@@ -20,11 +23,10 @@ class TestRunner {
      * Method: Run
      * Runs all methods starting with 'Test_' in the given class instance.
      * @param {Object} testSuite - Instance of a test class.
-     * @returns {Boolean} - True if all tests passed.
+     * @returns {Boolean} - True if all tests in this suite passed.
      */
     Run(testSuite) {
         suiteName := Type(testSuite)
-
         this.log.Info(">>> Starting Test Suite: " . suiteName)
 
         passCount := 0
@@ -33,15 +35,13 @@ class TestRunner {
         ; Inspect the base (prototype) of the instance to find defined methods
         for propName in testSuite.Base.OwnProps() {
             if (SubStr(propName, 1, 5) == "Test_") {
-                ; Log the current method being executed (PIE)
                 this.log.Info("  Running: " . propName)
 
                 try {
-                    ; Run Setup if exists
-                    if HasMethod(testSuite, "Setup")
+                    if (HasMethod(testSuite, "Setup")) {
                         testSuite.Setup()
+                    }
 
-                    ; Execute the test method
                     testSuite.%propName%()
 
                     passCount++
@@ -50,14 +50,49 @@ class TestRunner {
                     failCount++
                     this.log.Error("    => [FAIL]", e)
                 } finally {
-                    ; Run Teardown if exists
-                    if HasMethod(testSuite, "Teardown")
+                    if (HasMethod(testSuite, "Teardown")) {
                         testSuite.Teardown()
+                    }
                 }
             }
         }
 
+        ; Store result for the final summary
+        this.suiteResults.Push({
+            Name: suiteName,
+            Pass: passCount,
+            Fail: failCount
+        })
+
         this.log.Info("--- " . suiteName . " Finished. Pass: " . passCount . ", Fail: " . failCount)
         return (failCount == 0)
+    }
+
+    /**
+     * Method: PrintFinalSummary
+     * Logs a formatted summary of all executed test suites.
+     */
+    PrintFinalSummary() {
+        this.log.Info("========================================")
+        this.log.Info("FINAL TEST SUMMARY")
+        this.log.Info("========================================")
+
+        totalPass := 0
+        totalFail := 0
+
+        for result in this.suiteResults {
+            status := (result.Fail == 0) ? "[PASS]" : "[FAIL]"
+            ; AHK v2 Format syntax: {Index:Format}. Use 's' for strings and negative width for left-alignment.
+            line := Format("{1:-7s} {2:-25s} (Pass: {3}, Fail: {4})",
+                status, result.Name, result.Pass, result.Fail)
+            this.log.Info(line)
+            
+            totalPass += result.Pass
+            totalFail += result.Fail
+        }
+
+        this.log.Info("----------------------------------------")
+        this.log.Info(Format("TOTAL:  Pass: {1}, Fail: {2}", totalPass, totalFail))
+        this.log.Info("========================================")
     }
 }

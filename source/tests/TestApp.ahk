@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 
 /**
  * Test Application Entry Point
@@ -49,6 +49,9 @@ try {
     success := _runner.Run(LoggerTest()) && success
     success := _runner.Run(JSONUnitTest()) && success
 
+    ; 4. Report final results
+    _runner.PrintFinalSummary()
+
     if (success) {
         _log.Info("All test suites passed.")
     } else {
@@ -59,6 +62,6 @@ try {
     _log.Error("Test Runner crashed.", e)
 }
 
-; 4. Finalize
+; 5. Finalize
 _log.Flush("TEST_END")
 ExitApp(success ? 0 : 1)
