@@ -26,6 +26,11 @@
 #Include adapter/ConfigManagerTest.ahk
 #Include core/InputProcessorTest.ahk
 #Include infrastructure/LoggerTest.ahk
+#Include infrastructure/ServiceLocatorTest.ahk
+#Include infrastructure/KeyEventTest.ahk
+#Include infrastructure/AssertTest.ahk
+#Include infrastructure/WindowTest.ahk
+#Include infrastructure/ImeTest.ahk
 #Include vender/JSONUnitTest.ahk
 
 ; Determine paths
@@ -47,6 +52,11 @@ try {
     success := _runner.Run(ConfigManagerTest()) && success
     success := _runner.Run(InputProcessorTest()) && success
     success := _runner.Run(LoggerTest()) && success
+    success := _runner.Run(ServiceLocatorTest()) && success
+    success := _runner.Run(KeyEventTest()) && success
+    success := _runner.Run(AssertTest()) && success
+    success := _runner.Run(WindowTest()) && success
+    success := _runner.Run(ImeTest()) && success
     success := _runner.Run(JSONUnitTest()) && success
 
     ; 4. Report final results
