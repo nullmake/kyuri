@@ -150,16 +150,16 @@ class InputProcessor {
 
     /**
      * @method ReportValidationResults
-     * Displays a summary of validation errors if any occurred.
+     * Throws an Error if any validation errors occurred during initialization.
      */
     ReportValidationResults() {
         if (this.validationErrors.Length > 0) {
-            msg := "Kyuri Configuration Errors:`n`n"
+            combinedErrors := ""
             for err in this.validationErrors {
                 this.log.Error("Configuration validation error: " . err)
-                msg .= "- " . err . "`n"
+                combinedErrors .= "- " . err . "`n"
             }
-            MsgBox(msg, "Kyuri Config Error", 48)
+            throw Error("InputProcessor validation failed:`n" . combinedErrors)
         }
     }
 
@@ -359,8 +359,8 @@ class InputProcessor {
         targetAction := ""
         switch layer {
             case LayerType.BOTH: targetAction := remap.HoldBoth
-            case LayerType.M0: targetAction := remap.HoldM0
-            case LayerType.M1: targetAction := remap.HoldM1
+            case LayerType.M0:   targetAction := remap.HoldM0
+            case LayerType.M1:   targetAction := remap.HoldM1
         }
 
         ; Fallback to Tap if specific hold action not defined
