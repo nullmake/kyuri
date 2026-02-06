@@ -24,6 +24,7 @@
 ; --- Test Infrastructure & Suites ---
 #Include TestRunner.ahk
 #Include adapter/ConfigManagerTest.ahk
+#Include adapter/SystemActionAdapterTest.ahk
 #Include core/InputProcessorTest.ahk
 #Include infrastructure/LoggerTest.ahk
 #Include infrastructure/ServiceLocatorTest.ahk
@@ -44,12 +45,13 @@ ServiceLocator.Register("Log", _log)
 OnError(GlobalErrorHandler)
 
 try {
-    _log.Info("Starting Kyuri Test Suite...")
+    _log.Info("Starting Kyuri Test Suite... (Timestamp: " . A_Now . ")")
 
     ; 3. Execute Test Suites
     _runner := TestRunner(_log)
     success := true
     success := _runner.Run(ConfigManagerTest()) && success
+    success := _runner.Run(SystemActionAdapterTest()) && success
     success := _runner.Run(InputProcessorTest()) && success
     success := _runner.Run(LoggerTest()) && success
     success := _runner.Run(ServiceLocatorTest()) && success
