@@ -1,15 +1,15 @@
 #Requires AutoHotkey v2.0
 
 /**
- * Class: ServiceLocator
+ * @class ServiceLocator
  * Provides a centralized registry for application services with dynamic property access.
  */
 class ServiceLocator {
-    /** @prop {Map} services - Internal storage for service instances */
+    /** @field {Map} services - Internal storage for service instances */
     static services := Map()
 
     /**
-     * Method: Register
+     * @method Register
      * Registers a service instance and dynamically creates a shortcut property.
      * @param {String} name - The service identifier (e.g., "Config")
      * @param {Object} serviceInstance - The instance to register
@@ -27,7 +27,7 @@ class ServiceLocator {
     }
 
     /**
-     * Method: Get
+     * @method Get
      * Retrieves a registered service instance.
      * @param {String} name - The service identifier
      * @returns {Object} The service instance
@@ -37,5 +37,19 @@ class ServiceLocator {
             throw Error("Service not registered: " . name)
         }
         return this.services[name]
+    }
+
+    /**
+     * @method Reset
+     * Clears all registered services and removes dynamic properties.
+     * Primarily used for unit testing to ensure isolation.
+     */
+    static Reset() {
+        for name, _ in this.services.Clone() {
+            if (this.HasProp(name)) {
+                this.DeleteProp(name)
+            }
+        }
+        this.services.Clear()
     }
 }

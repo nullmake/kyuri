@@ -193,6 +193,42 @@ class InputProcessorTest {
     }
 
     /**
+     * @method Test_Initialization_ShouldThrowErrorOnInvalidKey
+     */
+    Test_Initialization_ShouldThrowErrorOnInvalidKey() {
+        badConfig := ConfigManager(A_ScriptDir)
+        badConfig.settings := Map(
+            "Modifiers", Map("M0", Map("vkCode", "vk1D", "Fallback", "LAlt")),
+            "Remaps", [ Map("Trigger", "h", "Tap", "InvalidKeyName") ]
+        )
+        
+        try {
+            InputProcessor(badConfig, this.log, this.mockSys)
+            Assert.Fail("Should have thrown validation error for invalid key.")
+        } catch Error as e {
+            Assert.True(InStr(e.Message, "InputProcessor validation failed"), "Error message should mention validation failure.")
+        }
+    }
+
+    /**
+     * @method Test_Initialization_ShouldThrowErrorOnUndefinedFunc
+     */
+    Test_Initialization_ShouldThrowErrorOnUndefinedFunc() {
+        badConfig := ConfigManager(A_ScriptDir)
+        badConfig.settings := Map(
+            "Modifiers", Map("M0", Map("vkCode", "vk1D", "Fallback", "LAlt")),
+            "Remaps", [ Map("Trigger", "h", "Tap", "UnknownFunc()") ]
+        )
+        
+        try {
+            InputProcessor(badConfig, this.log, this.mockSys)
+            Assert.Fail("Should have thrown validation error for undefined function.")
+        } catch Error as e {
+            Assert.True(InStr(e.Message, "Undefined built-in function"), "Error message should mention the undefined function.")
+        }
+    }
+
+    /**
      * @method Teardown
      * Cleans up instances after each test.
      */

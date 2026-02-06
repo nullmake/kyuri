@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0
 
 /**
- * Class: ConfigManager
+ * @class ConfigManager
  * Handles application configuration lifecycle and template initialization.
  */
 class ConfigManager {
@@ -22,13 +22,15 @@ class ConfigManager {
     }
 
     /**
-     * Method: Load
+     * @method Load
      * Ensures the config file exists and loads it into memory.
+     * Throws an Error if loading fails.
      */
     Load() {
-        if !FileExist(this.configFilePath) {
+        if (!FileExist(this.configFilePath)) {
             this.InitializeFromTemplate()
         }
+        
         try {
             /**
              * JSON.LoadFile strips comments internally.
@@ -36,12 +38,12 @@ class ConfigManager {
              */
             this.settings := JSON.LoadFile(this.configFilePath)
         } catch Error as e {
-            MsgBox("Failed to load config.json:`n" . e.Message, "Kyuri Error", 16)
-            ExitApp()
+            throw Error("Failed to load config.json: " . e.Message)
         }
     }
 
     /**
+     * @method Get
      * Gets a value using dot-notation path.
      * @param {String} path - Path string like "General.Version" or "Modifiers.M0".
      * @param {Any} defaultValue - Value to return if the path is not found.
@@ -72,14 +74,13 @@ class ConfigManager {
     }
 
     /**
-     * Method: InitializeFromTemplate
+     * @method InitializeFromTemplate
      * Copies the template file to the active config file path if it doesn't exist.
+     * Throws an Error if the template is missing.
      */
     InitializeFromTemplate() {
-        if !FileExist(this.templatePath) {
-            err := "Critical Error: Template file missing.`nPath: " . this.templatePath
-            MsgBox(err, "Kyuri Error", 16)
-            ExitApp()
+        if (!FileExist(this.templatePath)) {
+            throw Error("Critical Error: Template file missing. Path: " . this.templatePath)
         }
         FileCopy(this.templatePath, this.configFilePath)
     }
